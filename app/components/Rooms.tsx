@@ -6,32 +6,31 @@ import Image from 'next/image';
 
 const rooms = [
   {
-    name: 'Habitación Estándar',
-    type: 'Confort & Descanso',
-    size: 'Doble',
-    desc: 'Espaciosa, limpia y equipada con todo lo necesario. Cama cómoda, baño privado y el silencio que necesitas para recargar energías.',
+    name: 'Habitación Doble',
+    type: 'Entre semana · Lun–Jue',
+    price: '$1,500',
+    period: 'por noche',
+    desc: 'Espaciosa y cómoda para hasta 3 adultos y 1 menor. Cama de calidad, baño privado y todo lo necesario para descansar.',
     src: 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=900&q=85',
+    amenities: ['WiFi alta velocidad', 'Estacionamiento', 'Cafetera'],
   },
   {
-    name: 'Habitación Superior',
-    type: 'Mayor Espacio',
-    size: 'Superior',
-    desc: 'Más amplitud, mejor vista y todos los detalles cuidados. Ideal para quienes buscan un poco más de comodidad en su estancia.',
+    name: 'Habitación Doble',
+    type: 'Fin de semana · Vie–Dom',
+    price: '$2,500',
+    period: 'por noche',
+    desc: 'La misma habitación cómoda y limpia para tu fin de semana en Santiago. Ideal para desconectarte y explorar el pueblo.',
     src: 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=900&q=85',
+    amenities: ['WiFi alta velocidad', 'Estacionamiento', 'Cafetera'],
   },
   {
-    name: 'Habitación Familiar',
-    type: 'Para la Familia',
-    size: 'Familiar',
-    desc: 'Diseñada para que toda la familia disfrute. Espacio suficiente, camas adicionales y la misma calidez de siempre.',
+    name: 'Grupos y familias',
+    type: 'Más de 4 personas',
+    price: 'Consultar',
+    period: 'habitación adicional',
+    desc: 'Para grupos de más de 4 personas, contamos con habitaciones adicionales. Contáctanos para disponibilidad y tarifas especiales.',
     src: 'https://images.unsplash.com/photo-1594563703937-fdc640497dcd?w=900&q=85',
-  },
-  {
-    name: 'Suite El Encino',
-    type: 'Lo Mejor del Hotel',
-    size: 'Suite',
-    desc: 'Nuestra habitación más especial. Mayor superficie, zona de estar independiente y atención preferencial. Para una escapada que no olvidarás.',
-    src: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=900&q=85',
+    amenities: ['WiFi alta velocidad', 'Estacionamiento', 'Cafetera'],
   },
 ];
 
@@ -64,7 +63,7 @@ function RoomCard({ room, index }: { room: typeof rooms[0]; index: number }) {
       transition={{ duration: 0.85, delay: index * 0.08, ease: [0.5, 0.2, 0.1, 1.14] }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      style={{ cursor: 'pointer' }}
+      style={{ cursor: 'default' }}
     >
       {/* Image */}
       <div style={{
@@ -75,7 +74,7 @@ function RoomCard({ room, index }: { room: typeof rooms[0]; index: number }) {
         marginBottom: '1.5rem',
       }}>
         <motion.div
-          animate={{ scale: hovered ? 1.06 : 1 }}
+          animate={{ scale: hovered ? 1.05 : 1 }}
           transition={{ duration: 0.7, ease: [0.5, 0.2, 0.1, 1.14] }}
           style={{ position: 'absolute', inset: 0 }}
         >
@@ -88,44 +87,66 @@ function RoomCard({ room, index }: { room: typeof rooms[0]; index: number }) {
           />
         </motion.div>
 
-        {/* Overlay on hover */}
-        <motion.div
-          animate={{ opacity: hovered ? 1 : 0 }}
-          transition={{ duration: 0.4 }}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'rgba(4,4,4,0.45)',
-            display: 'flex',
-            alignItems: 'flex-end',
-            padding: '2rem',
-          }}
-        >
-          <p style={{
-            fontFamily: 'var(--sans)',
-            fontSize: '0.85rem',
-            color: 'rgba(250,250,250,0.9)',
-            lineHeight: 1.6,
-          }}>
-            {room.desc}
-          </p>
-        </motion.div>
-
-        {/* Size badge */}
+        {/* Price badge — glass */}
         <div style={{
           position: 'absolute',
           top: '1rem',
           right: '1rem',
-          background: 'var(--warm)',
-          color: 'var(--paper)',
-          fontFamily: 'var(--sans)',
-          fontSize: '0.65rem',
-          letterSpacing: '0.12em',
-          padding: '6px 12px',
-          textTransform: 'uppercase',
+          background: 'rgba(250,250,250,0.88)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderRadius: 'var(--radius-pill)',
+          border: '1px solid rgba(255,255,255,0.9)',
+          padding: '6px 14px',
+          boxShadow: '0 2px 12px rgba(4,4,4,0.1)',
+          display: 'flex',
+          alignItems: 'baseline',
+          gap: '4px',
         }}>
-          {room.size}
+          <span style={{ fontFamily: 'var(--serif-italic)', fontSize: '1.1rem', color: 'var(--warm)', fontWeight: 400 }}>
+            {room.price}
+          </span>
+          <span style={{ fontFamily: 'var(--sans)', fontSize: '0.6rem', color: 'var(--muted)', letterSpacing: '0.05em' }}>
+            MXN
+          </span>
         </div>
+
+        {/* Hover overlay with amenities */}
+        <motion.div
+          animate={{ opacity: hovered ? 1 : 0 }}
+          transition={{ duration: 0.35 }}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'rgba(4,4,4,0.5)',
+            backdropFilter: 'blur(4px)',
+            borderRadius: 'var(--radius-lg)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'flex-end',
+            padding: '1.5rem',
+          }}
+        >
+          <p style={{ fontFamily: 'var(--sans)', fontSize: '0.82rem', color: 'rgba(250,250,250,0.9)', lineHeight: 1.6, marginBottom: '1rem' }}>
+            {room.desc}
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {room.amenities.map((a) => (
+              <span key={a} style={{
+                fontFamily: 'var(--sans)',
+                fontSize: '0.65rem',
+                color: 'var(--paper)',
+                background: 'rgba(133,109,71,0.7)',
+                backdropFilter: 'blur(8px)',
+                padding: '4px 10px',
+                borderRadius: 'var(--radius-pill)',
+                letterSpacing: '0.05em',
+              }}>
+                {a}
+              </span>
+            ))}
+          </div>
+        </motion.div>
       </div>
 
       {/* Info */}
@@ -136,31 +157,28 @@ function RoomCard({ room, index }: { room: typeof rooms[0]; index: number }) {
           letterSpacing: '0.18em',
           textTransform: 'uppercase',
           color: 'var(--warm)',
-          marginBottom: '0.5rem',
+          marginBottom: '0.4rem',
         }}>
           {room.type}
         </p>
         <h3 style={{
           fontFamily: 'var(--serif)',
-          fontSize: '1.6rem',
+          fontSize: '1.5rem',
           fontWeight: 400,
           color: 'var(--ink)',
           letterSpacing: '-0.01em',
-          marginBottom: '0.75rem',
+          marginBottom: '0.5rem',
         }}>
           {room.name}
         </h3>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ width: '32px', height: '1px', background: 'var(--warm)' }} />
-          <span style={{
-            fontFamily: 'var(--sans)',
-            fontSize: '0.75rem',
-            color: 'var(--muted)',
-            letterSpacing: '0.08em',
-          }}>
-            Ver detalles
-          </span>
-        </div>
+        <p style={{
+          fontFamily: 'var(--sans)',
+          fontSize: '0.82rem',
+          color: 'var(--muted)',
+          letterSpacing: '0.03em',
+        }}>
+          {room.price === 'Consultar' ? 'Disponibilidad a consultar' : `${room.price} MXN · ${room.period}`}
+        </p>
       </div>
     </motion.article>
   );
@@ -197,7 +215,7 @@ export default function Rooms() {
                 color: 'var(--warm)',
                 marginBottom: '1rem',
               }}>
-                Habitaciones
+                Habitaciones & Tarifas
               </p>
             </FadeIn>
             <FadeIn delay={0.1}>
@@ -210,7 +228,7 @@ export default function Rooms() {
                 color: 'var(--ink)',
               }}>
                 Descansa como<br />
-                <em style={{ fontStyle: 'italic', color: 'var(--muted)' }}>mereces</em>
+                <em style={{ fontStyle: 'italic', fontFamily: 'var(--serif-italic)', color: 'var(--muted)' }}>mereces</em>
               </h2>
             </FadeIn>
           </div>
@@ -222,7 +240,7 @@ export default function Rooms() {
               maxWidth: '320px',
               lineHeight: 1.7,
             }}>
-              Cada habitación fue diseñada para darte comodidad, limpieza y el descanso que buscas en Santiago.
+              Todas las habitaciones incluyen WiFi de alta velocidad, estacionamiento y cafetera sin costo adicional.
             </p>
           </FadeIn>
         </div>
@@ -234,7 +252,7 @@ export default function Rooms() {
           gap: 'clamp(2rem, 4vw, 3.5rem) clamp(1.5rem, 3vw, 2.5rem)',
         }}>
           {rooms.map((room, i) => (
-            <RoomCard key={room.name} room={room} index={i} />
+            <RoomCard key={`${room.name}-${i}`} room={room} index={i} />
           ))}
         </div>
 
@@ -247,7 +265,7 @@ export default function Rooms() {
             borderTop: '1px solid var(--border)',
           }}>
             <p style={{
-              fontFamily: 'var(--serif)',
+              fontFamily: 'var(--serif-italic)',
               fontSize: 'clamp(1.4rem, 2.5vw, 2rem)',
               fontStyle: 'italic',
               color: 'var(--muted)',
@@ -285,6 +303,22 @@ export default function Rooms() {
             >
               Consultar disponibilidad
             </a>
+
+            {/* Disclaimer legal — discreto */}
+            <p style={{
+              fontFamily: 'var(--sans)',
+              fontSize: '0.68rem',
+              color: 'rgba(107,107,107,0.6)',
+              marginTop: '1.5rem',
+              maxWidth: '560px',
+              margin: '1.5rem auto 0',
+              lineHeight: 1.6,
+              letterSpacing: '0.01em',
+            }}>
+              * Las tarifas mostradas corresponden a temporada regular. Durante festivales, eventos especiales,
+              puentes y temporada alta (incluyendo Santiago Cielo Mágico, Semana Santa, Fiestas Patrias y Navidad/Año Nuevo),
+              las tarifas pueden variar sin previo aviso. Consulta disponibilidad y precio exacto al momento de tu reservación.
+            </p>
           </div>
         </FadeIn>
       </div>
