@@ -61,6 +61,7 @@ const schemaHotel = {
   "name": "Hotel El Encino Santiago",
   "description": "Un lugar en el corazón de Santiago, Nuevo León, perfecto para descansar y desconectarte. WiFi de alta velocidad, estacionamiento y cafetera en habitación incluidos.",
   "url": "https://hotelelencino.com",
+  "identifier": "hotel-el-encino-santiago",
   "telephone": "+52-81-1999-9318",
   "image": [
     "https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=1200&q=85",
