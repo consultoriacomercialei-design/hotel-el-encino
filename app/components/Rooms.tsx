@@ -262,15 +262,25 @@ export default function Rooms() {
                 letterSpacing: '0.18em',
                 textTransform: 'uppercase',
                 color: 'var(--paper)',
-                background: 'var(--ink)',
+                background: 'var(--warm)',
                 textDecoration: 'none',
                 padding: '18px 48px',
                 display: 'inline-block',
-                transition: 'background 0.3s ease',
+                transition: 'all 0.35s ease',
                 cursor: 'pointer',
+                boxShadow: '0 4px 24px rgba(133,109,71,0.3)',
+                letterSpacing: '0.18em',
               }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--warm)'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--ink)'; }}
+              onMouseEnter={(e) => {
+                const el = e.currentTarget as HTMLAnchorElement;
+                el.style.background = 'var(--ink)';
+                el.style.boxShadow = '0 8px 32px rgba(4,4,4,0.25)';
+              }}
+              onMouseLeave={(e) => {
+                const el = e.currentTarget as HTMLAnchorElement;
+                el.style.background = 'var(--warm)';
+                el.style.boxShadow = '0 4px 24px rgba(133,109,71,0.3)';
+              }}
             >
               Consultar disponibilidad
             </a>

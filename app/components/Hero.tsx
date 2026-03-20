@@ -168,21 +168,27 @@ export default function Hero() {
               textTransform: 'uppercase',
               color: 'var(--paper)',
               textDecoration: 'none',
-              border: '1px solid rgba(250,250,250,0.5)',
+              background: 'rgba(250,250,250,0.15)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              border: '1px solid rgba(250,250,250,0.45)',
               padding: '16px 36px',
-              transition: 'all 0.4s ease',
+              transition: 'all 0.35s ease',
               display: 'inline-block',
               cursor: 'pointer',
+              boxShadow: '0 4px 24px rgba(4,4,4,0.15)',
             }}
             onMouseEnter={(e) => {
               const el = e.currentTarget as HTMLAnchorElement;
               el.style.background = 'var(--warm)';
               el.style.borderColor = 'var(--warm)';
+              el.style.boxShadow = '0 8px 32px rgba(133,109,71,0.4)';
             }}
             onMouseLeave={(e) => {
               const el = e.currentTarget as HTMLAnchorElement;
-              el.style.background = 'transparent';
-              el.style.borderColor = 'rgba(250,250,250,0.5)';
+              el.style.background = 'rgba(250,250,250,0.15)';
+              el.style.borderColor = 'rgba(250,250,250,0.45)';
+              el.style.boxShadow = '0 4px 24px rgba(4,4,4,0.15)';
             }}
           >
             Descubrir

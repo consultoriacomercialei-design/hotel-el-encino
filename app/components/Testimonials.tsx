@@ -209,25 +209,27 @@ export default function Testimonials() {
                 fontSize: '0.7rem',
                 letterSpacing: '0.18em',
                 textTransform: 'uppercase',
-                color: 'var(--ink)',
+                color: 'var(--paper)',
                 textDecoration: 'none',
-                border: '1px solid var(--ink)',
+                background: 'var(--warm)',
+                border: '1px solid var(--warm)',
                 padding: '16px 40px',
                 display: 'inline-block',
-                transition: 'all 0.3s ease',
+                transition: 'all 0.35s ease',
                 cursor: 'pointer',
+                boxShadow: '0 4px 24px rgba(133,109,71,0.3)',
               }}
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLAnchorElement;
-                el.style.background = 'var(--warm)';
-                el.style.borderColor = 'var(--warm)';
-                el.style.color = 'var(--paper)';
+                el.style.background = 'var(--ink)';
+                el.style.borderColor = 'var(--ink)';
+                el.style.boxShadow = '0 8px 32px rgba(4,4,4,0.2)';
               }}
               onMouseLeave={(e) => {
                 const el = e.currentTarget as HTMLAnchorElement;
-                el.style.background = 'transparent';
-                el.style.borderColor = 'var(--ink)';
-                el.style.color = 'var(--ink)';
+                el.style.background = 'var(--warm)';
+                el.style.borderColor = 'var(--warm)';
+                el.style.boxShadow = '0 4px 24px rgba(133,109,71,0.3)';
               }}
             >
               Ver todas las reseñas en Google
