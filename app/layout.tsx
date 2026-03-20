@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Casa Pedrera — Hotel Boutique | Santiago, N.L.",
+  title: "Hotel El Encino Santiago | Centro Histórico, N.L.",
   description:
-    "Un refugio de 9 habitaciones en las faldas de la Sierra Madre. Donde el silencio de la montaña se une al confort contemporáneo.",
-  keywords: ["hotel boutique", "Santiago Nuevo León", "Sierra Madre", "lujo", "descanso"],
+    "Un lugar en el corazón de Santiago, Nuevo León, perfecto para descansar y desconectarte. Habitaciones limpias, cómodas y atención personalizada.",
+  keywords: ["hotel", "Santiago Nuevo León", "hospedaje", "descanso", "centro histórico", "Hotel El Encino"],
 };
 
 export default function RootLayout({
