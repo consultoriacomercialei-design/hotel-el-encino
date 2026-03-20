@@ -95,8 +95,8 @@ const schemaHotel = {
   "containsPlace": [
     {
       "@type": "HotelRoom",
-      "name": "Habitación Doble",
-      "description": "Habitación doble para hasta 3 adultos y 1 menor. Incluye WiFi de alta velocidad, estacionamiento y cafetera.",
+      "name": "Habitación Doble — Entre Semana",
+      "description": "Habitación doble para hasta 3 adultos y 1 menor. Lunes a jueves. Incluye WiFi de alta velocidad, estacionamiento y cafetera.",
       "occupancy": {
         "@type": "QuantitativeValue",
         "maxValue": 4,
@@ -107,34 +107,35 @@ const schemaHotel = {
         { "@type": "LocationFeatureSpecification", "name": "Cafetera", "value": true },
         { "@type": "LocationFeatureSpecification", "name": "Baño privado", "value": true }
       ],
-      "offers": [
-        {
-          "@type": "Offer",
-          "name": "Tarifa entre semana (Lun–Jue)",
-          "price": "1500",
-          "priceCurrency": "MXN",
-          "priceSpecification": {
-            "@type": "UnitPriceSpecification",
-            "price": "1500",
-            "priceCurrency": "MXN",
-            "unitText": "noche"
-          },
-          "availability": "https://schema.org/InStock"
-        },
-        {
-          "@type": "Offer",
-          "name": "Tarifa fin de semana (Vie–Dom)",
-          "price": "2500",
-          "priceCurrency": "MXN",
-          "priceSpecification": {
-            "@type": "UnitPriceSpecification",
-            "price": "2500",
-            "priceCurrency": "MXN",
-            "unitText": "noche"
-          },
-          "availability": "https://schema.org/InStock"
-        }
-      ]
+      "offers": {
+        "@type": "Offer",
+        "price": "1500",
+        "priceCurrency": "MXN",
+        "availability": "https://schema.org/InStock",
+        "url": "https://hotelelencino.com/#contacto"
+      }
+    },
+    {
+      "@type": "HotelRoom",
+      "name": "Habitación Doble — Fin de Semana",
+      "description": "Habitación doble para hasta 3 adultos y 1 menor. Viernes a domingo. Incluye WiFi de alta velocidad, estacionamiento y cafetera.",
+      "occupancy": {
+        "@type": "QuantitativeValue",
+        "maxValue": 4,
+        "unitText": "personas"
+      },
+      "amenityFeature": [
+        { "@type": "LocationFeatureSpecification", "name": "WiFi", "value": true },
+        { "@type": "LocationFeatureSpecification", "name": "Cafetera", "value": true },
+        { "@type": "LocationFeatureSpecification", "name": "Baño privado", "value": true }
+      ],
+      "offers": {
+        "@type": "Offer",
+        "price": "2500",
+        "priceCurrency": "MXN",
+        "availability": "https://schema.org/InStock",
+        "url": "https://hotelelencino.com/#contacto"
+      }
     }
   ]
 };
