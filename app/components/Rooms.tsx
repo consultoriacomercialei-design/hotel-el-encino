@@ -269,7 +269,6 @@ export default function Rooms() {
                 transition: 'all 0.35s ease',
                 cursor: 'pointer',
                 boxShadow: '0 4px 24px rgba(133,109,71,0.3)',
-                letterSpacing: '0.18em',
               }}
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLAnchorElement;
