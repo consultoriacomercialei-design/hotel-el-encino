@@ -62,7 +62,10 @@ const schemaHotel = {
   "description": "Un lugar en el corazón de Santiago, Nuevo León, perfecto para descansar y desconectarte. WiFi de alta velocidad, estacionamiento y cafetera en habitación incluidos.",
   "url": "https://hotelelencino.com",
   "telephone": "+52-81-1999-9318",
-  "image": "https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=1200&q=85",
+  "image": [
+    "https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=1200&q=85",
+    "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=1200&q=85"
+  ],
   "checkInTime": "14:00",
   "checkOutTime": "12:00",
   "address": {
@@ -80,10 +83,10 @@ const schemaHotel = {
   },
   "aggregateRating": {
     "@type": "AggregateRating",
-    "ratingValue": "5.0",
-    "reviewCount": "23",
-    "bestRating": "5",
-    "worstRating": "1"
+    "ratingValue": 5.0,
+    "reviewCount": 23,
+    "bestRating": 5,
+    "worstRating": 1
   },
   "amenityFeature": [
     { "@type": "LocationFeatureSpecification", "name": "WiFi de Alta Velocidad", "value": true },
@@ -98,47 +101,18 @@ const schemaHotel = {
   "containsPlace": [
     {
       "@type": "HotelRoom",
-      "name": "Habitación Doble — Entre Semana",
-      "description": "Habitación doble para hasta 3 adultos y 1 menor. Lunes a jueves. Incluye WiFi de alta velocidad, estacionamiento y cafetera.",
+      "name": "Habitación Doble",
+      "description": "Habitación doble para hasta 3 adultos y 1 menor. Incluye WiFi de alta velocidad, estacionamiento y cafetera en habitación sin costo adicional.",
       "occupancy": {
         "@type": "QuantitativeValue",
-        "maxValue": 4,
-        "unitText": "personas"
+        "value": 4
       },
       "amenityFeature": [
         { "@type": "LocationFeatureSpecification", "name": "WiFi", "value": true },
         { "@type": "LocationFeatureSpecification", "name": "Cafetera", "value": true },
-        { "@type": "LocationFeatureSpecification", "name": "Baño privado", "value": true }
-      ],
-      "offers": {
-        "@type": "Offer",
-        "price": "1500",
-        "priceCurrency": "MXN",
-        "availability": "https://schema.org/InStock",
-        "url": "https://hotelelencino.com/#contacto"
-      }
-    },
-    {
-      "@type": "HotelRoom",
-      "name": "Habitación Doble — Fin de Semana",
-      "description": "Habitación doble para hasta 3 adultos y 1 menor. Viernes a domingo. Incluye WiFi de alta velocidad, estacionamiento y cafetera.",
-      "occupancy": {
-        "@type": "QuantitativeValue",
-        "maxValue": 4,
-        "unitText": "personas"
-      },
-      "amenityFeature": [
-        { "@type": "LocationFeatureSpecification", "name": "WiFi", "value": true },
-        { "@type": "LocationFeatureSpecification", "name": "Cafetera", "value": true },
-        { "@type": "LocationFeatureSpecification", "name": "Baño privado", "value": true }
-      ],
-      "offers": {
-        "@type": "Offer",
-        "price": "2500",
-        "priceCurrency": "MXN",
-        "availability": "https://schema.org/InStock",
-        "url": "https://hotelelencino.com/#contacto"
-      }
+        { "@type": "LocationFeatureSpecification", "name": "Baño privado", "value": true },
+        { "@type": "LocationFeatureSpecification", "name": "Estacionamiento", "value": true }
+      ]
     }
   ]
 };
