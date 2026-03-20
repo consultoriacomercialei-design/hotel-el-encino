@@ -71,6 +71,7 @@ function RoomCard({ room, index }: { room: typeof rooms[0]; index: number }) {
         position: 'relative',
         aspectRatio: '3/4',
         overflow: 'hidden',
+        borderRadius: 'var(--radius-lg)',
         marginBottom: '1.5rem',
       }}>
         <motion.div
@@ -264,7 +265,8 @@ export default function Rooms() {
                 color: 'var(--paper)',
                 background: 'var(--warm)',
                 textDecoration: 'none',
-                padding: '18px 48px',
+                padding: '16px 44px',
+                borderRadius: 'var(--radius-pill)',
                 display: 'inline-block',
                 transition: 'all 0.35s ease',
                 cursor: 'pointer',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const links = [
@@ -14,6 +14,7 @@ const links = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 60);
@@ -21,210 +22,231 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const closeMenu = () => setMenuOpen(false);
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    if (menuOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [menuOpen]);
 
   return (
-    <>
-      <header
+    <header
+      ref={menuRef}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 50,
+        padding: '12px 20px',
+        display: 'flex',
+        justifyContent: 'center',
+      }}
+    >
+      {/* Floating pill navbar */}
+      <div
         style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 50,
+          width: '100%',
+          maxWidth: '900px',
+          height: '54px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 20px',
+          borderRadius: 'var(--radius-pill)',
           transition: 'all 0.5s cubic-bezier(.5,.2,.1,1)',
-          background: scrolled ? 'var(--glass-light)' : 'transparent',
-          backdropFilter: scrolled ? 'var(--glass-blur)' : 'none',
-          WebkitBackdropFilter: scrolled ? 'var(--glass-blur)' : 'none',
-          borderBottom: scrolled ? '1px solid var(--glass-border-light)' : '1px solid transparent',
-          boxShadow: scrolled ? 'var(--glass-shadow)' : 'none',
+          background: scrolled
+            ? 'rgba(250,250,250,0.78)'
+            : 'rgba(250,250,250,0.12)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          border: scrolled
+            ? '1px solid rgba(255,255,255,0.8)'
+            : '1px solid rgba(255,255,255,0.25)',
+          boxShadow: scrolled
+            ? '0 4px 32px rgba(4,4,4,0.10), inset 0 1px 0 rgba(255,255,255,0.9)'
+            : '0 4px 24px rgba(4,4,4,0.18), inset 0 1px 0 rgba(255,255,255,0.2)',
         }}
       >
-        <div
+        {/* Hamburger */}
+        <button
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
           style={{
-            maxWidth: '1400px',
-            margin: '0 auto',
-            padding: '0 2rem',
-            height: '72px',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            flexDirection: 'column',
+            gap: '5px',
+            padding: '6px',
+            borderRadius: '8px',
           }}
         >
-          {/* Hamburger */}
-          <button
-            onClick={() => setMenuOpen((v) => !v)}
-            aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '6px',
-              padding: '8px',
-            }}
-          >
-            {[0, 1, 2].map((i) => (
-              <motion.span
-                key={i}
-                animate={
-                  i === 0 ? (menuOpen ? { rotate: 45, y: 9 } : { rotate: 0, y: 0 }) :
-                  i === 1 ? (menuOpen ? { opacity: 0 } : { opacity: 1 }) :
-                  (menuOpen ? { rotate: -45, y: -9 } : { rotate: 0, y: 0 })
-                }
-                transition={{ duration: 0.35, ease: [0.5, 0.2, 0.1, 1.14] }}
-                style={{
-                  display: 'block',
-                  width: '24px',
-                  height: '1px',
-                  background: menuOpen ? 'var(--paper)' : (scrolled ? 'var(--ink)' : 'var(--paper)'),
-                  transformOrigin: 'center',
-                  transition: 'background 0.3s',
-                }}
-              />
-            ))}
-          </button>
+          {[0, 1, 2].map((i) => (
+            <motion.span
+              key={i}
+              animate={
+                i === 0 ? (menuOpen ? { rotate: 45, y: 8 } : { rotate: 0, y: 0 }) :
+                i === 1 ? (menuOpen ? { opacity: 0, scaleX: 0 } : { opacity: 1, scaleX: 1 }) :
+                (menuOpen ? { rotate: -45, y: -8 } : { rotate: 0, y: 0 })
+              }
+              transition={{ duration: 0.3, ease: [0.5, 0.2, 0.1, 1.14] }}
+              style={{
+                display: 'block',
+                width: '20px',
+                height: '1.5px',
+                background: scrolled ? 'var(--ink)' : 'var(--paper)',
+                transformOrigin: 'center',
+                transition: 'background 0.3s',
+                borderRadius: '2px',
+              }}
+            />
+          ))}
+        </button>
 
-          {/* Logo */}
-          <a
-            href="#"
-            style={{
-              fontFamily: 'var(--serif)',
-              fontSize: '1.1rem',
-              fontWeight: 400,
-              letterSpacing: '0.14em',
-              color: scrolled ? 'var(--ink)' : 'var(--paper)',
-              textDecoration: 'none',
-              textTransform: 'uppercase',
-              transition: 'color 0.4s',
-              position: 'absolute',
-              left: '50%',
-              transform: 'translateX(-50%)',
-            }}
-          >
-            El Encino
-          </a>
+        {/* Logo */}
+        <a
+          href="#"
+          style={{
+            fontFamily: 'var(--serif)',
+            fontSize: '1rem',
+            fontWeight: 400,
+            letterSpacing: '0.16em',
+            color: scrolled ? 'var(--ink)' : 'var(--paper)',
+            textDecoration: 'none',
+            textTransform: 'uppercase',
+            transition: 'color 0.4s',
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          El Encino
+        </a>
 
-          {/* CTA — glass button */}
-          <a
-            href="#contacto"
-            style={{
-              fontFamily: 'var(--sans)',
-              fontSize: '0.7rem',
-              letterSpacing: '0.15em',
-              textTransform: 'uppercase',
-              color: scrolled ? 'var(--ink)' : 'var(--paper)',
-              textDecoration: 'none',
-              padding: '10px 20px',
-              transition: 'all 0.35s ease',
-              cursor: 'pointer',
-              background: scrolled
-                ? 'transparent'
-                : 'rgba(250,250,250,0.15)',
-              backdropFilter: scrolled ? 'none' : 'blur(10px)',
-              WebkitBackdropFilter: scrolled ? 'none' : 'blur(10px)',
-              border: scrolled
-                ? '1px solid var(--ink)'
-                : '1px solid rgba(250,250,250,0.5)',
-            }}
-            onMouseEnter={(e) => {
-              const el = e.currentTarget as HTMLAnchorElement;
-              el.style.background = 'var(--warm)';
-              el.style.borderColor = 'var(--warm)';
-              el.style.color = 'var(--paper)';
-            }}
-            onMouseLeave={(e) => {
-              const el = e.currentTarget as HTMLAnchorElement;
-              el.style.background = scrolled ? 'transparent' : 'rgba(250,250,250,0.15)';
-              el.style.borderColor = scrolled ? 'var(--ink)' : 'rgba(250,250,250,0.5)';
-              el.style.color = scrolled ? 'var(--ink)' : 'var(--paper)';
-            }}
-          >
-            Reservar
-          </a>
-        </div>
-      </header>
+        {/* CTA */}
+        <a
+          href="#contacto"
+          style={{
+            fontFamily: 'var(--sans)',
+            fontSize: '0.68rem',
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: scrolled ? 'var(--paper)' : 'var(--paper)',
+            textDecoration: 'none',
+            padding: '9px 18px',
+            borderRadius: 'var(--radius-pill)',
+            background: 'var(--warm)',
+            border: '1px solid transparent',
+            transition: 'all 0.3s ease',
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            boxShadow: '0 2px 12px rgba(133,109,71,0.35)',
+          }}
+          onMouseEnter={(e) => {
+            const el = e.currentTarget as HTMLAnchorElement;
+            el.style.background = 'var(--ink)';
+            el.style.boxShadow = '0 4px 20px rgba(4,4,4,0.25)';
+          }}
+          onMouseLeave={(e) => {
+            const el = e.currentTarget as HTMLAnchorElement;
+            el.style.background = 'var(--warm)';
+            el.style.boxShadow = '0 2px 12px rgba(133,109,71,0.35)';
+          }}
+        >
+          Reservar
+        </a>
+      </div>
 
-      {/* Full-screen nav overlay */}
+      {/* Glass dropdown menu */}
       <AnimatePresence>
         {menuOpen && (
           <motion.nav
-            initial={{ opacity: 0, x: '-100%' }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: '-100%' }}
-            transition={{ duration: 0.6, ease: [0.5, 0.2, 0.1, 1.14] }}
+            initial={{ opacity: 0, y: -12, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -12, scale: 0.96 }}
+            transition={{ duration: 0.35, ease: [0.5, 0.2, 0.1, 1.14] }}
             style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 40,
-              background: 'rgba(13,34,30,0.97)',
-              backdropFilter: 'blur(24px)',
-              WebkitBackdropFilter: 'blur(24px)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              padding: '0 4rem',
+              position: 'absolute',
+              top: '78px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: 'min(520px, calc(100vw - 40px))',
+              background: 'rgba(250,250,250,0.82)',
+              backdropFilter: 'blur(32px)',
+              WebkitBackdropFilter: 'blur(32px)',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid rgba(255,255,255,0.85)',
+              boxShadow: '0 20px 60px rgba(4,4,4,0.15), inset 0 1px 0 rgba(255,255,255,1)',
+              padding: '12px',
+              overflow: 'hidden',
             }}
           >
             {links.map((link, i) => (
               <motion.a
                 key={link.href}
                 href={link.href}
-                onClick={closeMenu}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 + i * 0.07, duration: 0.5, ease: [0.5, 0.2, 0.1, 1.14] }}
+                onClick={() => setMenuOpen(false)}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05, duration: 0.3 }}
                 style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
                   fontFamily: 'var(--serif-italic)',
-                  fontSize: 'clamp(2rem, 5vw, 4rem)',
+                  fontSize: '1.15rem',
                   fontWeight: 400,
-                  color: 'var(--paper)',
+                  color: 'var(--ink)',
                   textDecoration: 'none',
-                  borderBottom: '1px solid rgba(250,250,250,0.1)',
-                  padding: '1.5rem 0',
-                  letterSpacing: '-0.01em',
-                  transition: 'color 0.3s, padding-left 0.3s',
+                  padding: '14px 20px',
+                  borderRadius: 'var(--radius-md)',
+                  transition: 'background 0.2s, color 0.2s',
                   cursor: 'pointer',
+                  letterSpacing: '0.01em',
                 }}
                 onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLAnchorElement).style.color = 'var(--warm)';
-                  (e.currentTarget as HTMLAnchorElement).style.paddingLeft = '1rem';
+                  const el = e.currentTarget as HTMLAnchorElement;
+                  el.style.background = 'rgba(133,109,71,0.1)';
+                  el.style.color = 'var(--warm)';
                 }}
                 onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLAnchorElement).style.color = 'var(--paper)';
-                  (e.currentTarget as HTMLAnchorElement).style.paddingLeft = '0';
+                  const el = e.currentTarget as HTMLAnchorElement;
+                  el.style.background = 'transparent';
+                  el.style.color = 'var(--ink)';
                 }}
               >
-                {link.label}
+                <span>{link.label}</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.4 }}>
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
               </motion.a>
             ))}
 
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5, duration: 0.5 }}
-              style={{
-                position: 'absolute',
-                bottom: '3rem',
-                left: '4rem',
-                right: '4rem',
-                display: 'flex',
-                justifyContent: 'space-between',
-                borderTop: '1px solid rgba(250,250,250,0.1)',
-                paddingTop: '1.5rem',
-              }}
-            >
-              <span style={{ fontFamily: 'var(--sans)', fontSize: '0.75rem', color: 'rgba(250,250,250,0.45)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                Santiago, N.L. — México
+            {/* Footer del menú */}
+            <div style={{
+              marginTop: '4px',
+              padding: '12px 20px 4px',
+              borderTop: '1px solid rgba(4,4,4,0.06)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}>
+              <span style={{ fontFamily: 'var(--sans)', fontSize: '0.72rem', color: 'var(--muted)', letterSpacing: '0.08em' }}>
+                Santiago, N.L.
               </span>
-              <span style={{ fontFamily: 'var(--sans)', fontSize: '0.75rem', color: 'rgba(250,250,250,0.45)', letterSpacing: '0.1em' }}>
+              <a href="tel:+528119999318" style={{ fontFamily: 'var(--sans)', fontSize: '0.72rem', color: 'var(--warm)', textDecoration: 'none', letterSpacing: '0.05em' }}>
                 +52 (81) 1999 9318
-              </span>
-            </motion.div>
+              </a>
+            </div>
           </motion.nav>
         )}
       </AnimatePresence>
-    </>
+    </header>
   );
 }

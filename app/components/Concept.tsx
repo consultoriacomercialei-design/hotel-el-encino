@@ -9,16 +9,22 @@ const pillars = [
     number: '01',
     title: 'Tranquilidad',
     desc: 'En el corazón de Santiago, lejos del estrés del día a día. Cada rincón de El Encino fue pensado para que el cuerpo y la mente descansen de verdad.',
+    src: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=85',
+    alt: 'Sierra Madre desde Santiago Nuevo León',
   },
   {
     number: '02',
     title: 'Comodidad',
     desc: 'Habitaciones limpias, espaciosas y con camas de primera. Cuidamos cada detalle para que tu estancia sea exactamente lo que necesitas.',
+    src: 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800&q=85',
+    alt: 'Habitación cómoda Hotel El Encino',
   },
   {
     number: '03',
     title: 'Hospitalidad',
     desc: 'Atención personalizada y un equipo que se preocupa por ti. En El Encino te hacemos sentir como en casa desde el primer momento.',
+    src: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800&q=85',
+    alt: 'Hospitalidad y bienvenida Hotel El Encino',
   },
 ];
 
@@ -84,7 +90,7 @@ export default function Concept() {
               marginBottom: '2rem',
             }}>
               Tu refugio en el<br />
-              <em style={{ fontStyle: 'italic', color: 'var(--muted)' }}>centro de Santiago</em>
+              <em style={{ fontStyle: 'italic', fontFamily: 'var(--serif-italic)', color: 'var(--muted)' }}>centro de Santiago</em>
             </h2>
             <p style={{
               fontFamily: 'var(--sans)',
@@ -117,6 +123,8 @@ export default function Concept() {
               position: 'relative',
               aspectRatio: '4/5',
               overflow: 'hidden',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: '0 24px 64px rgba(4,4,4,0.12)',
             }}
           >
             <Image
@@ -126,61 +134,93 @@ export default function Concept() {
               sizes="(max-width: 768px) 100vw, 50vw"
               style={{ objectFit: 'cover' }}
             />
-            {/* Warm accent overlay */}
             <div style={{
               position: 'absolute',
               bottom: 0,
               left: 0,
               right: 0,
-              height: '30%',
-              background: 'linear-gradient(to top, rgba(13,34,30,0.4), transparent)',
+              height: '40%',
+              background: 'linear-gradient(to top, rgba(13,34,30,0.5), transparent)',
+              borderRadius: '0 0 var(--radius-lg) var(--radius-lg)',
             }} />
           </motion.div>
         </div>
 
-        {/* Three pillars */}
+        {/* Three pillars — Apple card style */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))',
-          gap: '0',
-          borderTop: '1px solid var(--border)',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',
+          gap: '1.25rem',
         }}>
           {pillars.map((p, i) => (
             <FadeIn key={p.number} delay={i * 0.12}>
               <div style={{
-                padding: 'clamp(2.5rem, 4vw, 4rem) clamp(1.5rem, 3vw, 3rem)',
-                borderRight: i < pillars.length - 1 ? '1px solid var(--border)' : 'none',
-                borderBottom: '1px solid var(--border)',
+                position: 'relative',
+                borderRadius: 'var(--radius-lg)',
+                overflow: 'hidden',
+                aspectRatio: '3/4',
+                cursor: 'default',
               }}>
-                <span style={{
-                  fontFamily: 'var(--serif)',
-                  fontSize: '3rem',
-                  fontWeight: 400,
-                  color: 'var(--border)',
-                  display: 'block',
-                  marginBottom: '1rem',
-                  lineHeight: 1,
+                {/* Background image */}
+                <Image
+                  src={p.src}
+                  alt={p.alt}
+                  fill
+                  sizes="(max-width: 640px) 100vw, 33vw"
+                  style={{ objectFit: 'cover' }}
+                />
+
+                {/* Gradient overlay */}
+                <div style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'linear-gradient(to top, rgba(4,4,4,0.85) 0%, rgba(4,4,4,0.3) 50%, rgba(4,4,4,0.05) 100%)',
+                }} />
+
+                {/* Glass content card at bottom */}
+                <div style={{
+                  position: 'absolute',
+                  bottom: '1.25rem',
+                  left: '1.25rem',
+                  right: '1.25rem',
+                  background: 'rgba(250,250,250,0.12)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  padding: '1.25rem 1.5rem',
+                  boxShadow: '0 4px 24px rgba(4,4,4,0.2)',
                 }}>
-                  {p.number}
-                </span>
-                <h3 style={{
-                  fontFamily: 'var(--serif)',
-                  fontSize: '1.5rem',
-                  fontWeight: 500,
-                  color: 'var(--ink)',
-                  marginBottom: '1rem',
-                  letterSpacing: '-0.01em',
-                }}>
-                  {p.title}
-                </h3>
-                <p style={{
-                  fontFamily: 'var(--sans)',
-                  fontSize: '0.9rem',
-                  color: 'var(--muted)',
-                  lineHeight: 1.75,
-                }}>
-                  {p.desc}
-                </p>
+                  <span style={{
+                    fontFamily: 'var(--sans)',
+                    fontSize: '0.6rem',
+                    letterSpacing: '0.2em',
+                    textTransform: 'uppercase',
+                    color: 'var(--warm)',
+                    display: 'block',
+                    marginBottom: '0.4rem',
+                  }}>
+                    {p.number}
+                  </span>
+                  <h3 style={{
+                    fontFamily: 'var(--serif)',
+                    fontSize: '1.4rem',
+                    fontWeight: 400,
+                    color: 'var(--paper)',
+                    marginBottom: '0.5rem',
+                    letterSpacing: '-0.01em',
+                  }}>
+                    {p.title}
+                  </h3>
+                  <p style={{
+                    fontFamily: 'var(--sans)',
+                    fontSize: '0.82rem',
+                    color: 'rgba(250,250,250,0.7)',
+                    lineHeight: 1.6,
+                  }}>
+                    {p.desc}
+                  </p>
+                </div>
               </div>
             </FadeIn>
           ))}

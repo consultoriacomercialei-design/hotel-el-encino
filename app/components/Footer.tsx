@@ -166,15 +166,17 @@ export default function Footer() {
               style={{
                 background: 'var(--warm)',
                 border: 'none',
-                padding: '18px 36px',
+                padding: '16px 36px',
+                borderRadius: 'var(--radius-pill)',
                 color: 'var(--paper)',
                 fontFamily: 'var(--sans)',
                 fontSize: '0.7rem',
                 letterSpacing: '0.18em',
                 textTransform: 'uppercase',
                 cursor: 'pointer',
-                transition: 'background 0.3s ease',
+                transition: 'all 0.3s ease',
                 alignSelf: 'flex-start',
+                boxShadow: '0 4px 20px rgba(133,109,71,0.3)',
               }}
               onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--paper)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--ink)'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--warm)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--paper)'; }}

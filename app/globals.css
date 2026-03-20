@@ -13,15 +13,23 @@
   --serif-italic: 'Playfair Display', Georgia, serif;
   --sans:    'Karla', system-ui, sans-serif;
 
+  /* Radii — Apple-style */
+  --radius-sm:  10px;
+  --radius-md:  18px;
+  --radius-lg:  28px;
+  --radius-xl:  40px;
+  --radius-pill: 980px;
+
   /* Glass tokens */
-  --glass-light:  rgba(250, 250, 250, 0.72);
-  --glass-dark:   rgba(4, 4, 4, 0.55);
+  --glass-light:  rgba(250, 250, 250, 0.75);
+  --glass-dark:   rgba(13, 34, 30, 0.75);
   --glass-warm:   rgba(133, 109, 71, 0.18);
-  --glass-blur:   blur(20px);
-  --glass-blur-sm: blur(10px);
-  --glass-border-light: rgba(255, 255, 255, 0.6);
-  --glass-border-dark:  rgba(255, 255, 255, 0.18);
-  --glass-shadow: 0 8px 32px rgba(4, 4, 4, 0.12);
+  --glass-blur:   blur(24px);
+  --glass-blur-sm: blur(12px);
+  --glass-border-light: rgba(255, 255, 255, 0.65);
+  --glass-border-dark:  rgba(255, 255, 255, 0.14);
+  --glass-shadow: 0 8px 40px rgba(4, 4, 4, 0.10);
+  --glass-shadow-warm: 0 8px 32px rgba(133, 109, 71, 0.32);
 }
 
 *, *::before, *::after {
@@ -43,36 +51,6 @@ body {
   line-height: 1.7;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
-}
-
-/* Glass utility classes */
-.glass-light {
-  background: var(--glass-light);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border-light);
-  box-shadow: var(--glass-shadow);
-}
-
-.glass-dark {
-  background: var(--glass-dark);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border-dark);
-  box-shadow: 0 8px 32px rgba(4, 4, 4, 0.3);
-}
-
-.glass-btn {
-  background: rgba(250, 250, 250, 0.15);
-  backdrop-filter: var(--glass-blur-sm);
-  -webkit-backdrop-filter: var(--glass-blur-sm);
-  border: 1px solid rgba(250, 250, 250, 0.45);
-  transition: all 0.35s ease;
-}
-
-.glass-btn:hover {
-  background: var(--warm);
-  border-color: var(--warm);
 }
 
 ::selection {

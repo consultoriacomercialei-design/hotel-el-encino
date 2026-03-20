@@ -135,9 +135,11 @@ export default function Testimonials() {
             <FadeIn key={review.name} delay={i * 0.1}>
               <div style={{
                 border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-lg)',
                 padding: 'clamp(1.75rem, 3vw, 2.5rem)',
                 display: 'flex',
                 flexDirection: 'column',
+                boxShadow: '0 4px 24px rgba(4,4,4,0.05)',
                 height: '100%',
               }}>
                 <StarRating count={review.rating} />
@@ -213,7 +215,8 @@ export default function Testimonials() {
                 textDecoration: 'none',
                 background: 'var(--warm)',
                 border: '1px solid var(--warm)',
-                padding: '16px 40px',
+                padding: '14px 40px',
+                borderRadius: 'var(--radius-pill)',
                 display: 'inline-block',
                 transition: 'all 0.35s ease',
                 cursor: 'pointer',
