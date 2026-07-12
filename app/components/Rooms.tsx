@@ -3,6 +3,9 @@
 import { useRef, useState } from 'react';
 import { motion, useInView } from 'framer-motion';
 import Image from 'next/image';
+import type { RoomPrices } from '@/app/lib/hotel-config';
+
+const money = (n: number) => `$${n.toLocaleString('en-US')}`;
 
 const rooms = [
   {
@@ -248,7 +251,13 @@ function RoomCard({ room, index }: { room: (typeof rooms)[0]; index: number }) {
   );
 }
 
-export default function Rooms() {
+export default function Rooms({ prices }: { prices: RoomPrices }) {
+  // Precios en vivo desde la config del hotel (misma fuente que el modal).
+  const priced = [
+    { ...rooms[0], price: money(prices.weekday) },
+    { ...rooms[1], price: money(prices.weekend) },
+    { ...rooms[2], price: `Desde ${money(prices.semana_santa)}` },
+  ];
   return (
     <section
       id="habitaciones"
@@ -315,7 +324,7 @@ export default function Rooms() {
           gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))',
           gap: 'clamp(2rem, 4vw, 3.5rem) clamp(1.5rem, 3vw, 2.5rem)',
         }}>
-          {rooms.map((room, i) => (
+          {priced.map((room, i) => (
             <RoomCard key={`${room.name}-${i}`} room={room} index={i} />
           ))}
         </div>

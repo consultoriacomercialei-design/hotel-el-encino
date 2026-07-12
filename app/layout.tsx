@@ -12,7 +12,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "Hotel El Encino Santiago",
   description:
-    "Un lugar en el corazón de Santiago, Nuevo León, perfecto para descansar y desconectarte. Habitaciones dobles desde $1,500 MXN. WiFi, estacionamiento y cafetera incluidos.",
+    "Un lugar en el corazón de Santiago, Nuevo León, perfecto para descansar y desconectarte. Habitaciones dobles desde $1,800 MXN. WiFi, estacionamiento y cafetera incluidos.",
   icons: {
     icon: "/logo.png",
     apple: "/logo.png",
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     siteName: "Hotel El Encino Santiago",
     title: "Hotel El Encino Santiago",
     description:
-      "Un lugar en el corazón de Santiago, Nuevo León. Habitaciones dobles desde $1,500 MXN. WiFi, estacionamiento y cafetera incluidos.",
+      "Un lugar en el corazón de Santiago, Nuevo León. Habitaciones dobles desde $1,800 MXN. WiFi, estacionamiento y cafetera incluidos.",
     images: [
       {
         url: "/67fd7781e8040-DJI_20241029162952_0279_D-min_gmxdot_jpg.jpeg",
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Hotel El Encino Santiago",
     description:
-      "Habitaciones dobles desde $1,500 MXN en el centro de Santiago, N.L.",
+      "Habitaciones dobles desde $1,800 MXN en el centro de Santiago, N.L.",
     images: ["/67fd7781e8040-DJI_20241029162952_0279_D-min_gmxdot_jpg.jpeg"],
   },
   robots: {

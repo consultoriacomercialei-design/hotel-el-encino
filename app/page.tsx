@@ -17,11 +17,12 @@ import BookingModal from './components/BookingModal';
 import BookingFloat from './components/BookingFloat';
 import AIChat from './components/AIChat';
 import { fetchGoogleReviews } from './lib/google-reviews';
+import { fetchRoomPrices } from './lib/hotel-config';
 
 export const dynamic = 'force-dynamic'; // render server-side so env vars are available
 
 export default async function Home() {
-  const googleData = await fetchGoogleReviews(4);
+  const [googleData, prices] = await Promise.all([fetchGoogleReviews(4), fetchRoomPrices()]);
 
   return (
     <>
@@ -40,7 +41,7 @@ export default async function Home() {
           theme="light"
         />
         <Concept />
-        <Rooms />
+        <Rooms prices={prices} />
         <MarqueeStrip
           items={['Habitaciones', 'Centro Histórico', 'Descanso total', 'WiFi', 'Estacionamiento', 'Check-in flexible', 'A 45 min de Monterrey']}
           speed={26}
