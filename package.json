@@ -9,10 +9,21 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
+    "@google-analytics/data": "^5.2.1",
+    "@stripe/connect-js": "^3.4.6",
+    "@stripe/react-connect-js": "^3.4.4",
+    "@stripe/react-stripe-js": "^6.7.0",
+    "@stripe/stripe-js": "^9.9.0",
+    "@types/leaflet": "^1.9.21",
+    "@types/web-push": "^3.6.4",
     "framer-motion": "^12.38.0",
+    "leaflet": "^1.9.4",
+    "maplibre-gl": "^5.24.0",
     "next": "16.2.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

@@ -1,5 +1,8 @@
 'use client';
 
+import Link from 'next/link';
+import { trackCtaClick } from '@/app/lib/analytics';
+
 export default function Footer() {
   const year = new Date().getFullYear();
 
@@ -164,8 +167,12 @@ export default function Footer() {
             <button
               type="submit"
               style={{
-                background: 'var(--warm)',
-                border: 'none',
+                background: 'linear-gradient(135deg, rgba(133,109,71,0.80) 0%, rgba(133,109,71,0.58) 100%)',
+                backdropFilter: 'blur(20px) saturate(180%) brightness(1.03)',
+                WebkitBackdropFilter: 'blur(20px) saturate(180%) brightness(1.03)',
+                border: '1px solid rgba(255,255,255,0.25)',
+                borderTop: '1px solid rgba(255,255,255,0.45)',
+                boxShadow: 'inset 0 0.5px 0 rgba(255,255,255,0.48), 0 4px 20px rgba(133,109,71,0.35)',
                 padding: '16px 36px',
                 borderRadius: 'var(--radius-pill)',
                 color: 'var(--paper)',
@@ -176,10 +183,17 @@ export default function Footer() {
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
                 alignSelf: 'flex-start',
-                boxShadow: '0 4px 20px rgba(133,109,71,0.3)',
               }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--paper)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--ink)'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--warm)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--paper)'; }}
+              onMouseEnter={(e) => {
+                const el = e.currentTarget as HTMLButtonElement;
+                el.style.background = 'linear-gradient(135deg, rgba(13,34,30,0.85) 0%, rgba(13,34,30,0.65) 100%)';
+                el.style.boxShadow = 'inset 0 0.5px 0 rgba(255,255,255,0.35), 0 4px 20px rgba(4,4,4,0.25)';
+              }}
+              onMouseLeave={(e) => {
+                const el = e.currentTarget as HTMLButtonElement;
+                el.style.background = 'linear-gradient(135deg, rgba(133,109,71,0.80) 0%, rgba(133,109,71,0.58) 100%)';
+                el.style.boxShadow = 'inset 0 0.5px 0 rgba(255,255,255,0.48), 0 4px 20px rgba(133,109,71,0.35)';
+              }}
             >
               Enviar solicitud
             </button>
@@ -195,17 +209,31 @@ export default function Footer() {
         }}>
           {/* Logo + tagline */}
           <div>
-            <p style={{
-              fontFamily: 'var(--serif)',
-              fontSize: '1.2rem',
-              fontWeight: 500,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              color: 'var(--paper)',
-              marginBottom: '0.75rem',
-            }}>
-              Hotel El Encino
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '0.75rem' }}>
+              <img
+                src="/logo.png"
+                alt="Hotel El Encino"
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  objectFit: 'contain',
+                  filter: 'brightness(0) invert(1)',
+                  opacity: 0.85,
+                  flexShrink: 0,
+                }}
+              />
+              <p style={{
+                fontFamily: 'var(--serif)',
+                fontSize: '1.2rem',
+                fontWeight: 500,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: 'var(--paper)',
+                margin: 0,
+              }}>
+                Hotel El Encino
+              </p>
+            </div>
             <p style={{
               fontFamily: 'var(--sans)',
               fontSize: '0.78rem',
@@ -237,13 +265,15 @@ export default function Footer() {
               Contacto
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <a href="tel:+528119999318" style={{ fontFamily: 'var(--sans)', fontSize: '0.82rem', color: 'rgba(250,250,250,0.5)', textDecoration: 'none', transition: 'color 0.2s' }}
+              <a href="tel:+528123816588" style={{ fontFamily: 'var(--sans)', fontSize: '0.82rem', color: 'rgba(250,250,250,0.5)', textDecoration: 'none', transition: 'color 0.2s' }}
+                onClick={() => trackCtaClick('phone', 'footer')}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--warm)'; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(250,250,250,0.5)'; }}
               >
-                +52 (81) 1999 9318
+                +52 (81) 2381 6588
               </a>
               <a href="https://www.instagram.com/elencinohospedaje" target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--sans)', fontSize: '0.82rem', color: 'rgba(250,250,250,0.5)', textDecoration: 'none', transition: 'color 0.2s' }}
+                onClick={() => trackCtaClick('instagram', 'footer')}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--warm)'; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(250,250,250,0.5)'; }}
               >
@@ -268,6 +298,7 @@ export default function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={s.label}
+                  onClick={() => trackCtaClick(s.label.toLowerCase() as 'instagram' | 'facebook', 'footer_icons')}
                   style={{
                     color: 'rgba(250,250,250,0.4)',
                     transition: 'color 0.25s',
@@ -295,9 +326,23 @@ export default function Footer() {
           <p style={{ fontFamily: 'var(--sans)', fontSize: '0.7rem', color: 'rgba(250,250,250,0.2)', letterSpacing: '0.05em' }}>
             © {year} Hotel El Encino Santiago. Todos los derechos reservados.
           </p>
-          <p style={{ fontFamily: 'var(--sans)', fontSize: '0.7rem', color: 'rgba(250,250,250,0.2)', letterSpacing: '0.05em' }}>
-            Santiago · Nuevo León · México
-          </p>
+          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <Link href="/privacidad" style={{ fontFamily: 'var(--sans)', fontSize: '0.7rem', color: 'rgba(250,250,250,0.25)', letterSpacing: '0.05em', textDecoration: 'none', transition: 'color 0.2s' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(250,250,250,0.5)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(250,250,250,0.25)'; }}
+            >
+              Privacidad
+            </Link>
+            <Link href="/terminos" style={{ fontFamily: 'var(--sans)', fontSize: '0.7rem', color: 'rgba(250,250,250,0.25)', letterSpacing: '0.05em', textDecoration: 'none', transition: 'color 0.2s' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(250,250,250,0.5)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(250,250,250,0.25)'; }}
+            >
+              Términos
+            </Link>
+            <p style={{ fontFamily: 'var(--sans)', fontSize: '0.7rem', color: 'rgba(250,250,250,0.2)', letterSpacing: '0.05em', margin: 0 }}>
+              Santiago · Nuevo León · México
+            </p>
+          </div>
         </div>
       </div>
     </footer>

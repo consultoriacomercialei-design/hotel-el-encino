@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/expire-payments",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/remind-pending",
+      "schedule": "0 7 * * *"
+    }
+  ]
+}

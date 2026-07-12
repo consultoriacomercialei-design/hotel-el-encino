@@ -1,7 +1,8 @@
 'use client';
 
 import { useRef } from 'react';
-import { motion, useInView } from 'framer-motion';
+import { motion, useInView } from 'framer-motion'; // motion used in FadeIn
+import { ScrollReveal } from './ScrollReveal';
 import Image from 'next/image';
 
 const experiences = [
@@ -80,8 +81,6 @@ function FadeIn({ children, delay = 0, style }: { children: React.ReactNode; del
 }
 
 export default function Features() {
-  const imgRef = useRef(null);
-  const imgInView = useInView(imgRef, { once: true, margin: '-60px' });
 
   return (
     <section id="experiencias" style={{ background: 'var(--forest)', padding: 'clamp(5rem, 10vw, 10rem) 0' }}>
@@ -133,24 +132,15 @@ export default function Features() {
           alignItems: 'start',
         }}>
 
-          {/* Image */}
-          <motion.div
-            ref={imgRef}
-            initial={{ opacity: 0, x: -30 }}
-            animate={imgInView ? { opacity: 1, x: 0 } : {}}
-            transition={{ duration: 1, ease: [0.5, 0.2, 0.1, 1.14] }}
-            style={{
-              position: 'relative',
-              aspectRatio: '3/4',
-              overflow: 'hidden',
-            }}
-          >
+          {/* Image — static div with overflow:hidden (NOT animated) to avoid white-bar bug */}
+          <div style={{ position: 'relative', aspectRatio: '3/4', overflow: 'hidden', borderRadius: 'var(--radius-lg)' }}>
             <Image
-              src="https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=900&q=85"
-              alt="Hotel El Encino Santiago, Nuevo León"
+              src="/santiago-plaza.webp"
+              alt="Santiago, Nuevo León — parroquia, lago y montaña"
               fill
               sizes="(max-width: 768px) 100vw, 45vw"
-              style={{ objectFit: 'cover' }}
+              quality={90}
+              style={{ objectFit: 'cover', objectPosition: 'center' }}
             />
             {/* Quote overlay */}
             <div style={{
@@ -176,7 +166,7 @@ export default function Features() {
               </p>
               <div style={{ width: '32px', height: '1px', background: 'var(--warm)' }} />
             </div>
-          </motion.div>
+          </div>
 
           {/* Features grid */}
           <div style={{

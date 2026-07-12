@@ -87,8 +87,8 @@ export default function MapSection() {
                   border: '1px solid var(--border)',
                 }}>
                   <p style={{ fontFamily: 'var(--sans)', fontSize: '0.6rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: '0.4rem' }}>Teléfono</p>
-                  <a href="tel:+528119999318" style={{ fontFamily: 'var(--sans)', fontSize: '0.85rem', color: 'var(--ink)', textDecoration: 'none', fontWeight: 500 }}>
-                    81 1999 9318
+                  <a href="tel:+528123816588" style={{ fontFamily: 'var(--sans)', fontSize: '0.85rem', color: 'var(--ink)', textDecoration: 'none', fontWeight: 500 }}>
+                    +52 (81) 2381 6588
                   </a>
                 </div>
                 <div style={{
@@ -114,7 +114,12 @@ export default function MapSection() {
                   textTransform: 'uppercase',
                   color: 'var(--paper)',
                   textDecoration: 'none',
-                  background: 'var(--warm)',
+                  background: 'linear-gradient(135deg, rgba(133,109,71,0.80) 0%, rgba(133,109,71,0.58) 100%)',
+                  backdropFilter: 'blur(20px) saturate(180%) brightness(1.03)',
+                  WebkitBackdropFilter: 'blur(20px) saturate(180%) brightness(1.03)',
+                  border: '1px solid rgba(255,255,255,0.25)',
+                  borderTop: '1px solid rgba(255,255,255,0.45)',
+                  boxShadow: 'inset 0 0.5px 0 rgba(255,255,255,0.48), 0 4px 20px rgba(133,109,71,0.35)',
                   padding: '14px 24px',
                   borderRadius: 'var(--radius-pill)',
                   display: 'inline-flex',
@@ -122,18 +127,17 @@ export default function MapSection() {
                   gap: '8px',
                   transition: 'all 0.3s ease',
                   cursor: 'pointer',
-                  boxShadow: '0 4px 20px rgba(133,109,71,0.3)',
                   alignSelf: 'flex-start',
                 }}
                 onMouseEnter={(e) => {
                   const el = e.currentTarget as HTMLAnchorElement;
-                  el.style.background = 'var(--ink)';
-                  el.style.boxShadow = '0 6px 24px rgba(4,4,4,0.2)';
+                  el.style.background = 'linear-gradient(135deg, rgba(13,34,30,0.85) 0%, rgba(13,34,30,0.65) 100%)';
+                  el.style.boxShadow = 'inset 0 0.5px 0 rgba(255,255,255,0.35), 0 4px 20px rgba(4,4,4,0.25)';
                 }}
                 onMouseLeave={(e) => {
                   const el = e.currentTarget as HTMLAnchorElement;
-                  el.style.background = 'var(--warm)';
-                  el.style.boxShadow = '0 4px 20px rgba(133,109,71,0.3)';
+                  el.style.background = 'linear-gradient(135deg, rgba(133,109,71,0.80) 0%, rgba(133,109,71,0.58) 100%)';
+                  el.style.boxShadow = 'inset 0 0.5px 0 rgba(255,255,255,0.48), 0 4px 20px rgba(133,109,71,0.35)';
                 }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -156,7 +160,7 @@ export default function MapSection() {
             position: 'relative',
           }}>
             <iframe
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3594.0!2d-100.1599007!3d25.4219673!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8662cfde04bb7553%3A0x510ae16fefe5748a!2sHotel%20El%20Encino%20Santiago!5e0!3m2!1ses!2smx!4v1"
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3594.058!2d-100.159901!3d25.421967!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8662cfde04bb7553%3A0x510ae16fefe5748a!2sHotel%20El%20Encino%20Santiago!5e0!3m2!1ses!2smx!4v1743400000000!5m2!1ses!2smx"
               width="100%"
               height="100%"
               style={{ border: 0 }}

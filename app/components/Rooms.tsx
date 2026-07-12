@@ -10,27 +10,30 @@ const rooms = [
     type: 'Entre semana · Lun–Jue',
     price: '$1,500',
     period: 'por noche',
-    desc: 'Espaciosa y cómoda para hasta 3 adultos y 1 menor. Cama de calidad, baño privado y todo lo necesario para descansar.',
-    src: 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=900&q=85',
-    amenities: ['WiFi alta velocidad', 'Estacionamiento', 'Cafetera'],
+    desc: 'Dos camas Queen Size para hasta 4 personas. Perfecta para parejas, familia con hijos o grupos de amigos que buscan comodidad durante la semana.',
+    src: '/IMG_4881.PNG',
+    amenities: ['2 camas Queen Size', 'Hasta 4 personas', 'WiFi', 'Estacionamiento', 'Cafetera'],
+    badge: null,
   },
   {
     name: 'Habitación Doble',
     type: 'Fin de semana · Vie–Dom',
     price: '$2,500',
     period: 'por noche',
-    desc: 'La misma habitación cómoda y limpia para tu fin de semana en Santiago. Ideal para desconectarte y explorar el pueblo.',
-    src: 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=900&q=85',
-    amenities: ['WiFi alta velocidad', 'Estacionamiento', 'Cafetera'],
+    desc: 'Las mismas dos camas Queen Size para tu escapada de fin de semana. Explora Cola de Caballo, la Presa La Boca y el centro histórico de Santiago.',
+    src: '/IMG_4880.PNG',
+    amenities: ['2 camas Queen Size', 'Hasta 4 personas', 'WiFi', 'Estacionamiento', 'Cafetera'],
+    badge: null,
   },
   {
-    name: 'Grupos y familias',
-    type: 'Más de 4 personas',
-    price: 'Consultar',
-    period: 'habitación adicional',
-    desc: 'Para grupos de más de 4 personas, contamos con habitaciones adicionales. Contáctanos para disponibilidad y tarifas especiales.',
-    src: 'https://images.unsplash.com/photo-1594563703937-fdc640497dcd?w=900&q=85',
-    amenities: ['WiFi alta velocidad', 'Estacionamiento', 'Cafetera'],
+    name: 'Temporada especial',
+    type: 'Cielo Mágico · Semana Santa · Otros',
+    price: 'Desde $2,000',
+    period: 'por noche',
+    desc: 'Durante festivales y temporada alta la habitación puede tener tarifa diferenciada. Consulta disponibilidad con anticipación — se agotan rápido.',
+    src: '/IMG_4876.PNG',
+    amenities: ['2 camas Queen Size', 'Hasta 4 personas', 'WiFi', 'Estacionamiento', 'Cafetera'],
+    badge: 'Alta demanda',
   },
 ];
 
@@ -50,7 +53,7 @@ function FadeIn({ children, delay = 0, style }: { children: React.ReactNode; del
   );
 }
 
-function RoomCard({ room, index }: { room: typeof rooms[0]; index: number }) {
+function RoomCard({ room, index }: { room: (typeof rooms)[0]; index: number }) {
   const [hovered, setHovered] = useState(false);
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: '-60px' });
@@ -63,18 +66,19 @@ function RoomCard({ room, index }: { room: typeof rooms[0]; index: number }) {
       transition={{ duration: 0.85, delay: index * 0.08, ease: [0.5, 0.2, 0.1, 1.14] }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      style={{ cursor: 'default' }}
+      style={{ cursor: 'default', display: 'flex', flexDirection: 'column' }}
     >
       {/* Image */}
       <div style={{
         position: 'relative',
-        aspectRatio: '3/4',
+        aspectRatio: '4/3',
         overflow: 'hidden',
         borderRadius: 'var(--radius-lg)',
-        marginBottom: '1.5rem',
+        marginBottom: '1.25rem',
+        flexShrink: 0,
       }}>
         <motion.div
-          animate={{ scale: hovered ? 1.05 : 1 }}
+          animate={{ scale: hovered ? 1.04 : 1 }}
           transition={{ duration: 0.7, ease: [0.5, 0.2, 0.1, 1.14] }}
           style={{ position: 'absolute', inset: 0 }}
         >
@@ -83,64 +87,87 @@ function RoomCard({ room, index }: { room: typeof rooms[0]; index: number }) {
             alt={room.name}
             fill
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            style={{ objectFit: 'cover' }}
+            quality={95}
+            style={{ objectFit: 'cover', objectPosition: 'center' }}
           />
         </motion.div>
 
-        {/* Price badge — glass */}
+        {/* Alta demanda badge — top left only when present */}
+        {room.badge && (
+          <div style={{
+            position: 'absolute',
+            top: '0.875rem',
+            left: '0.875rem',
+            background: 'linear-gradient(135deg, rgba(133,109,71,0.82) 0%, rgba(133,109,71,0.62) 100%)',
+            backdropFilter: 'blur(20px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+            borderRadius: 'var(--radius-pill)',
+            border: '1px solid rgba(255,255,255,0.30)',
+            borderTop: '1px solid rgba(255,255,255,0.52)',
+            padding: '4px 12px',
+            boxShadow: 'inset 0 0.5px 0 rgba(255,255,255,0.45), 0 2px 12px rgba(133,109,71,0.28)',
+          }}>
+            <span style={{ fontFamily: 'var(--sans)', fontSize: '0.6rem', color: 'var(--paper)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              {room.badge}
+            </span>
+          </div>
+        )}
+
+        {/* Price badge — bottom left, always visible */}
         <div style={{
           position: 'absolute',
-          top: '1rem',
-          right: '1rem',
-          background: 'rgba(250,250,250,0.88)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
+          bottom: '0.875rem',
+          left: '0.875rem',
+          background: 'rgba(10,10,10,0.62)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
           borderRadius: 'var(--radius-pill)',
-          border: '1px solid rgba(255,255,255,0.9)',
-          padding: '6px 14px',
-          boxShadow: '0 2px 12px rgba(4,4,4,0.1)',
+          border: '1px solid rgba(255,255,255,0.18)',
+          padding: '5px 13px',
           display: 'flex',
           alignItems: 'baseline',
           gap: '4px',
         }}>
-          <span style={{ fontFamily: 'var(--serif-italic)', fontSize: '1.1rem', color: 'var(--warm)', fontWeight: 400 }}>
+          <span style={{ fontFamily: 'var(--serif-italic)', fontSize: '1rem', color: 'rgba(255,255,255,0.96)', fontWeight: 400 }}>
             {room.price}
           </span>
-          <span style={{ fontFamily: 'var(--sans)', fontSize: '0.6rem', color: 'var(--muted)', letterSpacing: '0.05em' }}>
-            MXN
+          <span style={{ fontFamily: 'var(--sans)', fontSize: '0.58rem', color: 'rgba(255,255,255,0.55)', letterSpacing: '0.05em' }}>
+            MXN / noche
           </span>
         </div>
 
         {/* Hover overlay with amenities */}
         <motion.div
           animate={{ opacity: hovered ? 1 : 0 }}
-          transition={{ duration: 0.35 }}
+          transition={{ duration: 0.32 }}
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'rgba(4,4,4,0.5)',
-            backdropFilter: 'blur(4px)',
+            background: 'rgba(4,4,4,0.52)',
+            backdropFilter: 'blur(3px)',
             borderRadius: 'var(--radius-lg)',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'flex-end',
+            justifyContent: 'center',
+            alignItems: 'center',
             padding: '1.5rem',
+            gap: '0.75rem',
           }}
         >
-          <p style={{ fontFamily: 'var(--sans)', fontSize: '0.82rem', color: 'rgba(250,250,250,0.9)', lineHeight: 1.6, marginBottom: '1rem' }}>
+          <p style={{ fontFamily: 'var(--sans)', fontSize: '0.8rem', color: 'rgba(250,250,250,0.92)', lineHeight: 1.65, textAlign: 'center' }}>
             {room.desc}
           </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', justifyContent: 'center' }}>
             {room.amenities.map((a) => (
               <span key={a} style={{
                 fontFamily: 'var(--sans)',
-                fontSize: '0.65rem',
-                color: 'var(--paper)',
-                background: 'rgba(133,109,71,0.7)',
-                backdropFilter: 'blur(8px)',
-                padding: '4px 10px',
+                fontSize: '0.62rem',
+                color: 'rgba(255,255,255,0.90)',
+                background: 'rgba(255,255,255,0.14)',
+                border: '1px solid rgba(255,255,255,0.28)',
+                padding: '3px 9px',
                 borderRadius: 'var(--radius-pill)',
-                letterSpacing: '0.05em',
+                letterSpacing: '0.04em',
               }}>
                 {a}
               </span>
@@ -150,35 +177,72 @@ function RoomCard({ room, index }: { room: typeof rooms[0]; index: number }) {
       </div>
 
       {/* Info */}
-      <div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <p style={{
           fontFamily: 'var(--sans)',
-          fontSize: '0.65rem',
+          fontSize: '0.63rem',
           letterSpacing: '0.18em',
           textTransform: 'uppercase',
           color: 'var(--warm)',
-          marginBottom: '0.4rem',
+          marginBottom: '0.35rem',
         }}>
           {room.type}
         </p>
         <h3 style={{
           fontFamily: 'var(--serif)',
-          fontSize: '1.5rem',
+          fontSize: '1.4rem',
           fontWeight: 400,
           color: 'var(--ink)',
           letterSpacing: '-0.01em',
-          marginBottom: '0.5rem',
+          marginBottom: '0.4rem',
         }}>
           {room.name}
         </h3>
         <p style={{
           fontFamily: 'var(--sans)',
-          fontSize: '0.82rem',
+          fontSize: '0.8rem',
           color: 'var(--muted)',
-          letterSpacing: '0.03em',
+          letterSpacing: '0.02em',
+          marginBottom: '1.25rem',
+          flex: 1,
         }}>
           {room.price === 'Consultar' ? 'Disponibilidad a consultar' : `${room.price} MXN · ${room.period}`}
         </p>
+
+        {/* Reservar Ahora — CTA por tarjeta */}
+        <button
+          onClick={() => window.dispatchEvent(new Event('open-booking-modal'))}
+          style={{
+            width: '100%',
+            fontFamily: 'var(--sans)',
+            fontSize: '0.68rem',
+            letterSpacing: '0.16em',
+            textTransform: 'uppercase',
+            color: 'var(--paper)',
+            background: 'linear-gradient(135deg, rgba(133,109,71,0.88) 0%, rgba(133,109,71,0.68) 100%)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.22)',
+            borderTop: '1px solid rgba(255,255,255,0.44)',
+            padding: '13px 24px',
+            borderRadius: 'var(--radius-pill)',
+            cursor: 'pointer',
+            boxShadow: 'inset 0 0.5px 0 rgba(255,255,255,0.42), 0 4px 14px rgba(133,109,71,0.28)',
+            transition: 'background 0.25s ease, box-shadow 0.25s ease',
+          }}
+          onMouseEnter={(e) => {
+            const el = e.currentTarget as HTMLButtonElement;
+            el.style.background = 'linear-gradient(135deg, rgba(133,109,71,1.0) 0%, rgba(133,109,71,0.85) 100%)';
+            el.style.boxShadow = 'inset 0 0.5px 0 rgba(255,255,255,0.42), 0 8px 28px rgba(133,109,71,0.46)';
+          }}
+          onMouseLeave={(e) => {
+            const el = e.currentTarget as HTMLButtonElement;
+            el.style.background = 'linear-gradient(135deg, rgba(133,109,71,0.88) 0%, rgba(133,109,71,0.68) 100%)';
+            el.style.boxShadow = 'inset 0 0.5px 0 rgba(255,255,255,0.42), 0 4px 14px rgba(133,109,71,0.28)';
+          }}
+        >
+          Reservar Ahora
+        </button>
       </div>
     </motion.article>
   );
@@ -273,36 +337,39 @@ export default function Rooms() {
             }}>
               ¿Listo para tu escapada a Santiago?
             </p>
-            <a
-              href="#contacto"
+            <button
+              onClick={() => window.dispatchEvent(new Event('open-booking-modal'))}
               style={{
                 fontFamily: 'var(--sans)',
                 fontSize: '0.7rem',
                 letterSpacing: '0.18em',
                 textTransform: 'uppercase',
                 color: 'var(--paper)',
-                background: 'var(--warm)',
-                textDecoration: 'none',
+                background: 'linear-gradient(135deg, rgba(133,109,71,0.80) 0%, rgba(133,109,71,0.58) 100%)',
+                backdropFilter: 'blur(20px) saturate(180%) brightness(1.03)',
+                WebkitBackdropFilter: 'blur(20px) saturate(180%) brightness(1.03)',
+                border: '1px solid rgba(255,255,255,0.25)',
+                borderTop: '1px solid rgba(255,255,255,0.45)',
                 padding: '16px 44px',
                 borderRadius: 'var(--radius-pill)',
                 display: 'inline-block',
                 transition: 'all 0.35s ease',
                 cursor: 'pointer',
-                boxShadow: '0 4px 24px rgba(133,109,71,0.3)',
+                boxShadow: 'inset 0 0.5px 0 rgba(255,255,255,0.48), 0 4px 20px rgba(133,109,71,0.35)',
               }}
               onMouseEnter={(e) => {
-                const el = e.currentTarget as HTMLAnchorElement;
-                el.style.background = 'var(--ink)';
-                el.style.boxShadow = '0 8px 32px rgba(4,4,4,0.25)';
+                const el = e.currentTarget as HTMLButtonElement;
+                el.style.background = 'linear-gradient(135deg, rgba(133,109,71,1.0) 0%, rgba(133,109,71,0.82) 100%)';
+                el.style.boxShadow = 'inset 0 0.5px 0 rgba(255,255,255,0.48), 0 8px 32px rgba(133,109,71,0.5)';
               }}
               onMouseLeave={(e) => {
-                const el = e.currentTarget as HTMLAnchorElement;
-                el.style.background = 'var(--warm)';
-                el.style.boxShadow = '0 4px 24px rgba(133,109,71,0.3)';
+                const el = e.currentTarget as HTMLButtonElement;
+                el.style.background = 'linear-gradient(135deg, rgba(133,109,71,0.80) 0%, rgba(133,109,71,0.58) 100%)';
+                el.style.boxShadow = 'inset 0 0.5px 0 rgba(255,255,255,0.48), 0 4px 20px rgba(133,109,71,0.35)';
               }}
             >
-              Consultar disponibilidad
-            </a>
+              Reservar Ahora
+            </button>
 
             {/* Disclaimer legal — discreto */}
             <p style={{
