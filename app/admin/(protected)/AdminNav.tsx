@@ -8,8 +8,6 @@ const NAV_LINKS = [
   { href: '/admin/hospedajes',     label: 'Hospedajes'     },
   { href: '/admin/calendario',     label: 'Calendario'     },
   { href: '/admin/analytics',      label: 'Analytics'      },
-  { href: '/admin/guia',           label: 'Directorio'     },
-  { href: '/admin/outreach',       label: 'Outreach'       },
   { href: '/admin/configuracion',  label: 'Configuración'  },
   { href: '/admin/nueva',          label: '+ Nueva'        },
 ];
