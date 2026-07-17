@@ -84,6 +84,15 @@ export async function proxy(req: NextRequest) {
   if (pathname === '/mi-negocio' || pathname.startsWith('/mi-negocio/')) {
     return NextResponse.redirect(`https://directoriosantiago.com${pathname}${search}`, 301);
   }
+  // El admin del directorio también vive ahora en el dominio del directorio.
+  //   hotelelencino.com/admin/guia*     → directoriosantiago.com/admin/guia*
+  //   hotelelencino.com/admin/outreach* → directoriosantiago.com/admin/outreach*
+  if (
+    pathname === '/admin/guia' || pathname.startsWith('/admin/guia/') ||
+    pathname === '/admin/outreach' || pathname.startsWith('/admin/outreach/')
+  ) {
+    return NextResponse.redirect(`https://directoriosantiago.com${pathname}${search}`, 301);
+  }
 
   // Handle CORS preflight for all API routes
   if (req.method === 'OPTIONS' && pathname.startsWith('/api/')) {
