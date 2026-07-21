@@ -34,7 +34,9 @@ export async function GET() {
 
     return NextResponse.json(
       {
-        prices:  (map.room_prices as typeof DEFAULT_PRICES)  ?? DEFAULT_PRICES,
+        // Merge con defaults: garantiza que base_occupancy/max_occupancy (y
+        // cualquier campo nuevo) estén presentes aunque la fila de la DB sea vieja.
+        prices:  { ...DEFAULT_PRICES, ...((map.room_prices as Partial<typeof DEFAULT_PRICES>) ?? {}) },
         addons:  (map.addons      as typeof DEFAULT_ADDONS)  ?? DEFAULT_ADDONS,
         seasons: (map.seasons     as typeof DEFAULT_SEASONS) ?? DEFAULT_SEASONS,
       },
