@@ -3,6 +3,7 @@
 import { cookies } from 'next/headers';
 import { verifyAdminToken } from '@/app/lib/admin-auth';
 import { findAndDeleteCalendarEventsByFolio } from '@/app/lib/google-calendar';
+import type { Season } from '@/app/lib/pricing';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -97,11 +98,19 @@ export async function savePricesAction(prices: {
   weekday: number;
   weekend: number;
   extra_adult: number;
-  special_extra: number;
-  semana_santa: number;
+  base_occupancy: number;
+  max_occupancy: number;
+  special_extra?: number;
+  semana_santa?: number;
 }) {
   await requireAuth();
   await upsertSetting('room_prices', prices);
+  return { ok: true };
+}
+
+export async function saveSeasonsAction(seasons: Season[]) {
+  await requireAuth();
+  await upsertSetting('seasons', seasons);
   return { ok: true };
 }
 
@@ -121,17 +130,18 @@ export async function saveAddonsAction(addons: Array<{
 }
 
 export async function loadSettingsAction(): Promise<{
-  prices: { weekday: number; weekend: number; extra_adult: number; special_extra: number; semana_santa: number };
+  prices: { weekday: number; weekend: number; extra_adult: number; base_occupancy: number; max_occupancy: number; special_extra?: number; semana_santa?: number };
   addons: Array<{ id: string; icon: string; title: string; subtitle: string; unitPrice: number; perNight: boolean; perPerson?: boolean; active: boolean }>;
+  seasons: Season[];
 }> {
-  const { DEFAULT_PRICES, DEFAULT_ADDONS } = await import('@/app/lib/hotel-config-defaults');
+  const { DEFAULT_PRICES, DEFAULT_ADDONS, DEFAULT_SEASONS } = await import('@/app/lib/hotel-config-defaults');
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-    return { prices: DEFAULT_PRICES, addons: DEFAULT_ADDONS };
+    return { prices: DEFAULT_PRICES, addons: DEFAULT_ADDONS, seasons: DEFAULT_SEASONS };
   }
 
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/hotel_settings?select=key,value&key=in.(room_prices,addons)`,
+    `${SUPABASE_URL}/rest/v1/hotel_settings?select=key,value&key=in.(room_prices,addons,seasons)`,
     {
       headers: {
         apikey: SUPABASE_SERVICE_KEY,
@@ -141,13 +151,14 @@ export async function loadSettingsAction(): Promise<{
     }
   );
 
-  if (!res.ok) return { prices: DEFAULT_PRICES, addons: DEFAULT_ADDONS };
+  if (!res.ok) return { prices: DEFAULT_PRICES, addons: DEFAULT_ADDONS, seasons: DEFAULT_SEASONS };
 
   const rows: { key: string; value: unknown }[] = await res.json();
   const map = Object.fromEntries(rows.map(r => [r.key, r.value]));
 
   return {
-    prices: (map.room_prices as typeof DEFAULT_PRICES) ?? DEFAULT_PRICES,
-    addons: (map.addons     as typeof DEFAULT_ADDONS)  ?? DEFAULT_ADDONS,
+    prices:  { ...DEFAULT_PRICES, ...((map.room_prices as Partial<typeof DEFAULT_PRICES>) ?? {}) },
+    addons:  (map.addons  as typeof DEFAULT_ADDONS)  ?? DEFAULT_ADDONS,
+    seasons: (map.seasons as Season[])               ?? DEFAULT_SEASONS,
   };
 }

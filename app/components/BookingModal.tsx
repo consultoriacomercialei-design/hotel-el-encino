@@ -5,156 +5,18 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { buildWhatsAppUrl } from '@/app/lib/whatsapp';
 import { trackBeginCheckout, trackPurchase, trackModalOpen, trackModalAbandon } from '@/app/lib/analytics';
+import { quoteRoom, addonUnitTotal, type RoomPrices, type Season, type Addon } from '@/app/lib/pricing';
+import { DEFAULT_ADDONS, DEFAULT_PRICES, DEFAULT_SEASONS } from '@/app/lib/hotel-config-defaults';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PRICING ENGINE
+// PRICING — motor compartido en app/lib/pricing.ts (fuente única de verdad).
+// Tarifas, ocupación y temporadas llegan de /api/public/hotel-config (DB).
 // ─────────────────────────────────────────────────────────────────────────────
-
-// Defaults — overridden at runtime by /api/public/hotel-config if the DB has settings
-const PRICE_WEEKDAY            = 1_500;
-const PRICE_WEEKEND            = 2_500;
-const PRICE_EXTRA_ADULT        =   500;
-const PRICE_SPECIAL_EXTRA      =   500;
-const PRICE_SEMANA_SANTA_FLAT  = 3_000;
-
-interface PriceConfig {
-  weekday: number;
-  weekend: number;
-  extra_adult: number;
-  special_extra: number;
-  semana_santa: number;
-}
-
-interface AddonConfig {
-  id: string;
-  icon: string;
-  title: string;
-  subtitle: string;
-  unitPrice: number;
-  perNight: boolean;
-  perPerson?: boolean;
-  active?: boolean;
-}
 
 interface HotelConfig {
-  prices: PriceConfig;
-  addons: AddonConfig[];
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ADD-ONS
-// ─────────────────────────────────────────────────────────────────────────────
-
-interface Addon {
-  id: string;
-  icon: string;
-  title: string;
-  subtitle: string;
-  unitPrice: number;
-  perNight: boolean;
-  perPerson?: boolean; // multiplied by adults count
-  active?: boolean;
-}
-
-const ADDONS: Addon[] = [
-  { id: 'breakfast',      icon: '🥐', title: 'Desayuno continental',    subtitle: '$280 por persona · café, fruta y pan',         unitPrice: 280, perNight: true, perPerson: true },
-  { id: 'late_checkout',  icon: '⏰', title: 'Late check-out',          subtitle: 'Salida hasta las 2:00 PM (regular: 12:00 PM)',  unitPrice: 350, perNight: false },
-  { id: 'early_checkin',  icon: '🌅', title: 'Early check-in',          subtitle: 'Entrada desde las 10:00 AM (regular: 3:00 PM)', unitPrice: 350, perNight: false },
-  { id: 'decoration',     icon: '🎉', title: 'Decoración especial',     subtitle: 'Globos, flores y mensaje personalizado',       unitPrice: 650, perNight: false },
-  { id: 'wine',           icon: '🍷', title: 'Botella de vino',         subtitle: 'Vino tinto o blanco de bienvenida',            unitPrice: 480, perNight: false },
-];
-
-// Semana Santa: rangos exactos por año (actualizar cada enero)
-const SEMANA_SANTA_RANGES = [
-  { from: '2025-04-12', to: '2025-04-20' }, // Sáb Lázaro → Dom Pascua 2025
-  { from: '2026-03-28', to: '2026-04-05' }, // Sáb Lázaro → Dom Pascua 2026
-];
-
-const SPECIAL_MONTHS = [
-  { months: [9],        label: 'Fiestas Patrias'    },
-  { months: [10, 11],   label: 'Cielo Mágico'       },
-  { months: [12],       label: 'Temporada Navideña' },
-  { months: [1],        label: 'Año Nuevo'          },
-];
-
-function specialLabel(d: Date) {
-  const iso = d.toISOString().slice(0, 10);
-  if (SEMANA_SANTA_RANGES.some(r => iso >= r.from && iso <= r.to)) return 'Semana Santa';
-  const m = d.getMonth() + 1;
-  return SPECIAL_MONTHS.find(p => p.months.includes(m))?.label ?? null;
-}
-function isWeekend(d: Date) { const n = d.getDay(); return n === 0 || n === 5 || n === 6; }
-
-interface Pricing {
-  valid:          boolean;
-  nights:         number;
-  rooms:          number;
-  surchargeRooms: number;
-  total:          number;
-  perNightFrom:   number;
-  breakdown:      Array<{ label: string; amount: number }>;
-  special:        string | null;
-  autoRoomNote:   string | null;
-}
-
-function calcPricing(checkIn: string, checkOut: string, adults: number, children: number, cfg?: PriceConfig): Pricing {
-  const PW  = cfg?.weekday       ?? PRICE_WEEKDAY;
-  const PWK = cfg?.weekend       ?? PRICE_WEEKEND;
-  const PEA = cfg?.extra_adult   ?? PRICE_EXTRA_ADULT;
-  const PSE = cfg?.special_extra ?? PRICE_SPECIAL_EXTRA;
-  const PSS = cfg?.semana_santa  ?? PRICE_SEMANA_SANTA_FLAT;
-  const nil: Pricing = { valid: false, nights: 0, rooms: 1, surchargeRooms: 0, total: 0, perNightFrom: 0, breakdown: [], special: null, autoRoomNote: null };
-  if (!checkIn || !checkOut) return nil;
-
-  const start = new Date(checkIn + 'T12:00:00');
-  const end   = new Date(checkOut + 'T12:00:00');
-  const nights = Math.round((end.getTime() - start.getTime()) / 86_400_000);
-  if (nights <= 0) return nil;
-
-  const total_people = adults + children;
-  const rooms        = Math.max(1, Math.ceil(total_people / 4));
-  const extra_adults = Math.max(0, adults - 3 * rooms);
-  const surchargeRooms = Math.min(extra_adults, rooms);
-
-  let grandTotal = 0;
-  let weekdayNights = 0, weekendNights = 0;
-  let firstSpecial: string | null = null;
-  let specialNights = 0;
-
-  let ssNights = 0; // noches a tarifa plana Semana Santa
-
-  for (let i = 0; i < nights; i++) {
-    const d   = new Date(start);
-    d.setDate(start.getDate() + i);
-    const iso = d.toISOString().slice(0, 10);
-    const isSS = SEMANA_SANTA_RANGES.some(r => iso >= r.from && iso <= r.to);
-    const sp   = isSS ? 'Semana Santa' : specialLabel(d);
-    if (sp && !firstSpecial) firstSpecial = sp;
-    if (sp) specialNights++;
-    if (isSS) {
-      ssNights++;
-      grandTotal += PSS * rooms + surchargeRooms * PEA;
-    } else {
-      const basePerRoom = isWeekend(d) ? PWK : PW;
-      const spExtra     = sp ? PSE : 0;
-      grandTotal += (basePerRoom + spExtra) * rooms + surchargeRooms * PEA;
-      isWeekend(d) ? weekendNights++ : weekdayNights++;
-    }
-  }
-
-  const breakdown: Pricing['breakdown'] = [];
-  if (rooms > 1)       breakdown.push({ label: `${rooms} habitaciones`, amount: 0 });
-  if (ssNights)        breakdown.push({ label: `${ssNights} noche${ssNights > 1 ? 's' : ''} Semana Santa`, amount: PSS * rooms * ssNights });
-  if (weekdayNights)   breakdown.push({ label: `${weekdayNights} noche${weekdayNights > 1 ? 's' : ''} entre semana`, amount: PW * rooms * weekdayNights });
-  if (weekendNights)   breakdown.push({ label: `${weekendNights} noche${weekendNights > 1 ? 's' : ''} fin de semana`, amount: PWK * rooms * weekendNights });
-  if (surchargeRooms)  breakdown.push({ label: `4° adulto · ${surchargeRooms} hab. × ${nights} noche${nights > 1 ? 's' : ''}`, amount: surchargeRooms * PEA * nights });
-  const otherSpecialNights = specialNights - ssNights;
-  if (firstSpecial && firstSpecial !== 'Semana Santa' && otherSpecialNights > 0) breakdown.push({ label: `Temporada ${firstSpecial} (+$${PSE}/hab.)`, amount: PSE * rooms * otherSpecialNights });
-
-  const perNightFrom = PW * rooms + surchargeRooms * PEA;
-  const autoRoomNote = rooms > 1 ? `Se asignan automáticamente ${rooms} habitaciones para ${total_people} personas` : null;
-
-  return { valid: true, nights, rooms, surchargeRooms, total: grandTotal, perNightFrom, breakdown, special: firstSpecial, autoRoomNote };
+  prices: RoomPrices;
+  addons: Addon[];
+  seasons: Season[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -296,17 +158,20 @@ export default function BookingModal() {
   const paymentInitiated = useRef(false);
 
   const today       = new Date().toISOString().split('T')[0];
-  const pricing     = calcPricing(checkIn, checkOut, adults, children, hotelConfig?.prices);
-  const activeAddons = (hotelConfig?.addons ?? ADDONS).filter(a => a.active !== false);
+  const pricing     = quoteRoom({
+    checkIn, checkOut, adults, children,
+    prices:  hotelConfig?.prices  ?? DEFAULT_PRICES,
+    seasons: hotelConfig?.seasons ?? DEFAULT_SEASONS,
+  });
+  const activeAddons = (hotelConfig?.addons ?? DEFAULT_ADDONS).filter(a => a.active !== false);
+  const baseOcc         = hotelConfig?.prices?.base_occupancy ?? DEFAULT_PRICES.base_occupancy;
+  const extraAdultPrice = hotelConfig?.prices?.extra_adult    ?? DEFAULT_PRICES.extra_adult;
 
-  const addonUnitTotal = (a: Addon) => {
-    const nights = Math.max(pricing.nights, 1);
-    if (a.perPerson) return a.unitPrice * adults * (a.perNight ? nights : 1);
-    return a.perNight ? a.unitPrice * nights : a.unitPrice;
-  };
+  const addonPriceOf = (a: Addon) => addonUnitTotal(a, pricing.nights, adults);
+  const selectedAddonIds = activeAddons.filter(a => selectedAddons.has(a.id)).map(a => a.id);
   const addonsTotal = activeAddons
     .filter(a => selectedAddons.has(a.id))
-    .reduce((sum, a) => sum + addonUnitTotal(a), 0);
+    .reduce((sum, a) => sum + addonPriceOf(a), 0);
   const grandTotal = pricing.total + addonsTotal;
 
   const toggleAddon = (id: string) => {
@@ -427,8 +292,11 @@ export default function BookingModal() {
     return {
       guest_name: guestName, guest_email: guestEmail, guest_phone: guestPhone,
       room_type: 'doble', check_in: checkIn, check_out: checkOut,
+      // El servidor RECALCULA total_mxn/nights/rooms/line_items desde estos campos
+      // + los add-ons seleccionados; estos valores son solo referencia/optimista.
       nights: pricing.nights, total_mxn: grandTotal,
       adults, children, rooms: pricing.rooms,
+      addons: selectedAddonIds,
       notes: notes + addonNote,
       source: isWaitlist ? 'web-waitlist' : 'web',
     };
@@ -787,13 +655,13 @@ export default function BookingModal() {
                       )}
                     </AnimatePresence>
 
-                    {/* 4th adult note */}
+                    {/* Extra adult note */}
                     <AnimatePresence>
-                      {pricing.surchargeRooms > 0 && (
+                      {pricing.extraAdults > 0 && (
                         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden', marginBottom: '14px' }}>
                           <div style={{ ...GLASS_CARD, borderRadius: '12px', padding: '11px 16px', display: 'flex', alignItems: 'center', gap: '10px', border: '1px solid rgba(133,109,71,0.28)' }}>
                             <span style={{ fontSize: '1rem' }}>ℹ️</span>
-                            <span style={{ fontFamily: 'var(--sans)', fontSize: '0.78rem', color: 'var(--ink)', lineHeight: 1.4 }}>El 4° adulto tiene un cargo adicional de <strong>$500 MXN/noche</strong> por habitación.</span>
+                            <span style={{ fontFamily: 'var(--sans)', fontSize: '0.78rem', color: 'var(--ink)', lineHeight: 1.4 }}>La tarifa incluye {baseOcc} adulto{baseOcc !== 1 ? 's' : ''} por habitación. Cada adulto adicional tiene un cargo de <strong>${extraAdultPrice.toLocaleString('es-MX')} MXN/noche</strong>.</span>
                           </div>
                         </motion.div>
                       )}
@@ -916,7 +784,7 @@ export default function BookingModal() {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {activeAddons.map(addon => {
                           const selected = selectedAddons.has(addon.id);
-                          const addonPrice = addonUnitTotal(addon);
+                          const addonPrice = addonPriceOf(addon);
                           return (
                             <button
                               key={addon.id}

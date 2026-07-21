@@ -19,9 +19,13 @@ import {
 import { limiters, getClientIP, tooManyRequests } from '@/app/lib/rate-limit';
 import { validateReservationInput, sanitizeString } from '@/app/lib/sanitize';
 import { isBlacklisted } from '@/app/lib/blacklist';
+import { fetchPricingConfig } from '@/app/lib/hotel-config';
+import { quoteReservation } from '@/app/lib/pricing';
 
 interface RequestBody extends ReservationPayload {
   payment_method?: 'online' | 'pending';
+  addons?: string[];
+  line_items?: Array<{ description: string; amount: number }>;
 }
 
 export async function POST(req: NextRequest) {
@@ -91,6 +95,38 @@ export async function POST(req: NextRequest) {
     const isWaitlist = source === 'web-waitlist';
     const isOnline   = payment_method === 'online';
 
+    // ── Recálculo de precio del lado del servidor (fuente de verdad) ──────────
+    // NUNCA se confía en el total del cliente: se recalcula desde fechas,
+    // ocupación y temporadas con la config viva de hotel_settings.
+    const cfg = await fetchPricingConfig();
+    const quote = quoteReservation({
+      checkIn:  body.check_in,
+      checkOut: body.check_out,
+      adults:   body.adults ?? 1,
+      children: body.children ?? 0,
+      prices:   cfg.prices,
+      seasons:  cfg.seasons,
+      addons:   cfg.addons,
+      selectedAddonIds: Array.isArray(body.addons) ? body.addons : [],
+    });
+
+    const serverLineItems = [
+      ...quote.breakdown.filter(b => b.amount > 0).map(b => ({ description: b.label, amount: b.amount })),
+      ...quote.addonItems.map(a => ({ description: a.label, amount: a.amount })),
+    ];
+
+    if (quote.valid && quote.total !== body.total_mxn) {
+      console.warn(`[RESERVATIONS] Total recalculado: cliente $${body.total_mxn} → servidor $${quote.total} (${body.check_in}→${body.check_out}, ${body.adults ?? 1}A/${body.children ?? 0}N)`);
+    }
+
+    // Sobrescribe los valores del cliente con los del servidor (usados en insert, calendario y correos)
+    if (quote.valid) {
+      body.total_mxn  = quote.total;
+      body.nights     = quote.nights;
+      body.rooms      = quote.rooms;
+      body.line_items = serverLineItems;
+    }
+
     // Determine status
     let status: string;
     if (isWaitlist)    status = 'waitlist';
@@ -113,6 +149,7 @@ export async function POST(req: NextRequest) {
       adults:         body.adults ?? 1,
       children:       body.children ?? 0,
       rooms:          body.rooms ?? 1,
+      line_items:     body.line_items ?? [],
       notes:          sanitizeString(body.notes ?? '', 500),
       source,
       payment_method,

@@ -1,35 +1,11 @@
 'use client';
 
-import { useState, useTransition, useRef } from 'react';
+import { useState, useTransition, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createReservationAction } from '../actions';
-
-const PRICE_WEEKDAY = 1_500;
-const PRICE_WEEKEND = 2_500;
-
-function calcTotal(checkIn: string, checkOut: string): number {
-  if (!checkIn || !checkOut) return 0;
-  const start = new Date(checkIn + 'T12:00:00');
-  const end   = new Date(checkOut + 'T12:00:00');
-  const nights = Math.round((end.getTime() - start.getTime()) / 86_400_000);
-  if (nights <= 0) return 0;
-  let total = 0;
-  for (let i = 0; i < nights; i++) {
-    const d = new Date(start);
-    d.setDate(start.getDate() + i);
-    const n = d.getDay();
-    total += (n === 0 || n === 5 || n === 6) ? PRICE_WEEKEND : PRICE_WEEKDAY;
-  }
-  return total;
-}
-
-function calcNights(checkIn: string, checkOut: string): number {
-  if (!checkIn || !checkOut) return 0;
-  const s = new Date(checkIn + 'T12:00:00');
-  const e = new Date(checkOut + 'T12:00:00');
-  return Math.max(0, Math.round((e.getTime() - s.getTime()) / 86_400_000));
-}
+import { quoteRoom, type RoomPrices, type Season } from '@/app/lib/pricing';
+import { DEFAULT_PRICES, DEFAULT_SEASONS } from '@/app/lib/hotel-config-defaults';
 
 export default function NuevaReservacionPage() {
   const router = useRouter();
@@ -48,8 +24,25 @@ export default function NuevaReservacionPage() {
   const [notify, setNotify] = useState(true);
   const [error, setError] = useState('');
 
-  const nights    = calcNights(form.check_in, form.check_out);
-  const autoTotal = calcTotal(form.check_in, form.check_out);
+  // Config viva (tarifas + ocupación + temporadas) para estimar igual que el modal
+  const [cfg, setCfg] = useState<{ prices: RoomPrices; seasons: Season[] }>({ prices: DEFAULT_PRICES, seasons: DEFAULT_SEASONS });
+  useEffect(() => {
+    fetch('/api/public/hotel-config')
+      .then(r => r.json())
+      .then(c => setCfg({ prices: c.prices ?? DEFAULT_PRICES, seasons: c.seasons ?? DEFAULT_SEASONS }))
+      .catch(() => {});
+  }, []);
+
+  const quote     = quoteRoom({
+    checkIn:  form.check_in,
+    checkOut: form.check_out,
+    adults:   parseInt(form.adults) || 2,
+    children: parseInt(form.children) || 0,
+    prices:   cfg.prices,
+    seasons:  cfg.seasons,
+  });
+  const nights    = quote.nights;
+  const autoTotal = quote.total;
   const totalMxn  = form.total_mxn ? parseFloat(form.total_mxn) : autoTotal;
 
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));

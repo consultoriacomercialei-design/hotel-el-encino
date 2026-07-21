@@ -7,8 +7,10 @@ interface PriceConfig {
   weekday: number;
   weekend: number;
   extra_adult: number;
-  special_extra: number;
-  semana_santa: number;
+  base_occupancy: number;
+  max_occupancy: number;
+  special_extra?: number;
+  semana_santa?: number;
 }
 
 interface AddonConfig {
@@ -130,11 +132,14 @@ export default function ConfigForm({
   };
 
   const PRICE_ROWS: { key: keyof PriceConfig; label: string; sub: string }[] = [
-    { key: 'weekday',       label: 'Entre semana (lun – jue)',    sub: 'por noche · por habitación' },
-    { key: 'weekend',       label: 'Fin de semana (vie – dom)',   sub: 'por noche · por habitación' },
-    { key: 'extra_adult',   label: '4° adulto (cargo extra)',      sub: 'por noche adicional'        },
-    { key: 'special_extra', label: 'Temporada especial (+cargo)', sub: 'extra por noche / habitación'},
-    { key: 'semana_santa',  label: 'Semana Santa (tarifa fija)',   sub: 'por noche · por habitación' },
+    { key: 'weekday',     label: 'Entre semana (lun – jue)',  sub: 'por noche · por habitación' },
+    { key: 'weekend',     label: 'Fin de semana (vie – dom)', sub: 'por noche · por habitación' },
+    { key: 'extra_adult', label: 'Adulto extra (cargo)',      sub: 'por noche · por cada adulto sobre los incluidos' },
+  ];
+
+  const OCCUPANCY_ROWS: { key: keyof PriceConfig; label: string; sub: string }[] = [
+    { key: 'base_occupancy', label: 'Adultos incluidos en la tarifa', sub: 'por habitación (los extra pagan cargo)' },
+    { key: 'max_occupancy',  label: 'Cupo máximo por habitación',     sub: 'más personas → se asigna otra habitación' },
   ];
 
   return (
@@ -179,6 +184,30 @@ export default function ConfigForm({
             </div>
           </div>
         ))}
+
+        {/* ── Ocupación ── */}
+        <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #f0ece5' }}>
+          <span style={{ ...labelStyle, marginBottom: '10px', display: 'block' }}>Ocupación por habitación</span>
+          {OCCUPANCY_ROWS.map(({ key, label, sub }) => (
+            <div key={key} style={rowStyle}>
+              <div>
+                <div style={{ fontSize: '0.85rem', color: '#1a1a1a', fontWeight: 500 }}>{label}</div>
+                <div style={{ fontSize: '0.72rem', color: '#aaa', marginTop: '2px' }}>{sub}</div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="number"
+                  value={prices[key]}
+                  min={1}
+                  step={1}
+                  onChange={e => handlePriceChange(key, e.target.value)}
+                  style={{ ...inputStyle, width: '70px' }}
+                />
+                <span style={{ fontSize: '0.72rem', color: '#aaa' }}>pers.</span>
+              </div>
+            </div>
+          ))}
+        </div>
 
         <div style={{ marginTop: '14px', padding: '12px 14px', background: '#f5f3ef', borderRadius: '8px', fontSize: '0.75rem', color: '#6b6b6b', lineHeight: 1.5 }}>
           Los cambios se reflejan en el formulario de reserva inmediatamente sin re-desplegar el sitio.

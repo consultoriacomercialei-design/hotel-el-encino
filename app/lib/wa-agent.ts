@@ -9,6 +9,10 @@
  */
 
 // ─── Pricing ─────────────────────────────────────────────────────────────────
+// TODO: el bot está DORMIDO (nunca lanzado). Sus tarifas/capacidad están
+// hardcodeadas aparte y NO conocen ocupación/temporadas de hotel_settings. Al
+// relanzarlo, migrar a `app/lib/pricing.ts` + `fetchPricingConfig()` para que
+// cotice igual que el modal web y el servidor.
 // Doble: $1,500 entre semana · $2,500 viernes/sábado/domingo
 const ROOM_PRICES_WEEKDAY: Record<string, number> = {
   doble:  1500,

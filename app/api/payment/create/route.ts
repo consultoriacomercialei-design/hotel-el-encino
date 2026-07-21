@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabasePatch } from '@/app/lib/supabase';
+import { supabaseGet, supabasePatch } from '@/app/lib/supabase';
 import { sendPendingPaymentEmails, type ReservationPayload } from '@/app/lib/emails';
 import { limiters, getClientIP, tooManyRequests } from '@/app/lib/rate-limit';
 import { isValidEmail, sanitizeString } from '@/app/lib/sanitize';
@@ -27,10 +27,10 @@ export async function POST(req: NextRequest) {
 
   try {
     const body: CreatePaymentBody = await req.json();
-    const { reservation_id, folio, total_mxn, guest_name, guest_email } = body;
+    const { reservation_id, folio, guest_name, guest_email } = body;
 
     // Validate required fields
-    if (!reservation_id || !folio || !total_mxn || !guest_email) {
+    if (!reservation_id || !folio || !guest_email) {
       return NextResponse.json({ error: 'Parámetros requeridos faltantes' }, { status: 400 });
     }
 
@@ -44,7 +44,19 @@ export async function POST(req: NextRequest) {
     if (!isValidEmail(guest_email)) {
       return NextResponse.json({ error: 'Email inválido' }, { status: 400 });
     }
-    if (typeof total_mxn !== 'number' || total_mxn < 1000 || total_mxn > 500_000) {
+
+    // El monto a cobrar SIEMPRE sale de la fila persistida (recalculada por el
+    // servidor en /api/reservations), nunca del total que arma el navegador.
+    const rows = await supabaseGet<{ total_mxn: number; nights: number }>('reservations', {
+      id:     `eq.${reservation_id}`,
+      select: 'total_mxn,nights',
+    });
+    const reservation = rows[0];
+    if (!reservation) {
+      return NextResponse.json({ error: 'Reservación no encontrada' }, { status: 404 });
+    }
+    const total_mxn = Number(reservation.total_mxn);
+    if (!Number.isFinite(total_mxn) || total_mxn < 1000 || total_mxn > 500_000) {
       return NextResponse.json({ error: 'Total inválido' }, { status: 400 });
     }
 
