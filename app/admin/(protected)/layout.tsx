@@ -7,6 +7,9 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { verifyAdminToken } from '@/app/lib/admin-auth';
 import AdminNav from './AdminNav';
+import AdminPwa from './AdminPwa';
+
+export const metadata = { manifest: '/manifest-admin.json' };
 
 export default async function AdminProtectedLayout({
   children,
@@ -22,6 +25,7 @@ export default async function AdminProtectedLayout({
 
   return (
     <div style={{ minHeight: '100dvh', background: '#f5f3ef', fontFamily: 'system-ui, sans-serif', overflowX: 'hidden' }}>
+      <AdminPwa />
       <AdminNav />
       <main style={{ padding: '20px 16px', maxWidth: '1100px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
         {children}

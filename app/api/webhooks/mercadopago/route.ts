@@ -12,6 +12,7 @@ import crypto from 'crypto';
 import { supabasePatch, supabaseGet, logWebhookEvent, logAuditEvent } from '@/app/lib/supabase';
 import { createCalendarEvent, findAndDeleteCalendarEventsByFolio, type CalendarPayload } from '@/app/lib/google-calendar';
 import { sendPaymentConfirmedEmails, type FullReservation } from '@/app/lib/emails';
+import { ensureCheckinCode } from '@/app/lib/wallet/checkin-code';
 
 const MP_ACCESS_TOKEN   = process.env.MP_ACCESS_TOKEN?.trim();
 const MP_WEBHOOK_SECRET = process.env.MP_WEBHOOK_SECRET?.trim();
@@ -177,11 +178,14 @@ export async function POST(req: NextRequest) {
         };
 
         try {
+          // Genera el código del pase de Wallet (best-effort; si falla, el
+          // correo sale sin botón pero con su .ics).
+          const checkinCode = await ensureCheckinCode(reservationId);
           // Remove any prior pending/waitlist calendar events before creating the confirmed one
           await findAndDeleteCalendarEventsByFolio(r.folio);
           await Promise.all([
             createCalendarEvent(calPayload, r.folio, '2'),
-            sendPaymentConfirmedEmails({ ...r, payment_id: paymentId }),
+            sendPaymentConfirmedEmails({ ...r, payment_id: paymentId, checkin_code: checkinCode ?? undefined }),
           ]);
         } catch (emailErr) {
           console.error('[WEBHOOK/MP] calendar/email error (non-fatal):', emailErr);

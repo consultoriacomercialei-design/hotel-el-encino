@@ -44,6 +44,20 @@ export interface FullReservation extends ReservationPayload {
   line_items?: LineItem[];
   edited_at?: string;
   edited_by?: string;
+  checkin_code?: string;
+}
+
+const HOTEL_PUBLIC_URL = (process.env.HOTEL_PUBLIC_URL || 'https://hotelelencino.com').replace(/\/$/, '');
+
+/** Botón "Agregar a Wallet" para el correo (link a la página puente que detecta iPhone/Android). */
+function walletButtonHtml(checkinCode?: string): string {
+  if (!checkinCode) return '';
+  const url = `${HOTEL_PUBLIC_URL}/wallet/${encodeURIComponent(checkinCode)}`;
+  return `
+          <div style="text-align:center;margin:0 0 20px">
+            <a href="${url}" style="display:inline-block;padding:14px 26px;background:#283820;color:#D4AF37;text-decoration:none;border-radius:12px;font-weight:600;font-size:0.95rem">📲 Agregar mi pase a Wallet</a>
+            <p style="color:#8a8a8a;font-size:0.78rem;margin:8px 0 0">Ábrelo desde tu teléfono: detecta si es iPhone o Android y guarda tu pase con QR para el check-in.</p>
+          </div>`;
 }
 
 const ROOM_LABELS: Record<string, string> = {
@@ -564,6 +578,7 @@ export async function sendPaymentConfirmedEmails(reservation: FullReservation) {
             ${guestRowsHtml(reservation)}
             <p style="margin:0"><strong>Total pagado:</strong> $${reservation.total_mxn.toLocaleString('es-MX')} MXN</p>
           </div>
+          ${walletButtonHtml(reservation.checkin_code)}
           <p style="color:#6b6b6b;font-size:0.85rem">📍 Hermenegildo Galeana 200, Santiago, N.L. · 📞 +52 (81) 2381 6588</p>
           <a href="https://wa.me/528123816588" style="display:inline-block;margin-top:12px;padding:10px 22px;background:#25D366;color:#fff;text-decoration:none;border-radius:980px;font-size:0.85rem">Contactar por WhatsApp</a>
         </div>

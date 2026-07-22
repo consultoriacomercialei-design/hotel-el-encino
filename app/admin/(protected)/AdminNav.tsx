@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 
 const NAV_LINKS = [
   { href: '/admin/reservaciones',  label: 'Reservaciones'  },
+  { href: '/admin/escaner',        label: 'Check-in'       },
   { href: '/admin/hospedajes',     label: 'Hospedajes'     },
   { href: '/admin/calendario',     label: 'Calendario'     },
   { href: '/admin/analytics',      label: 'Analytics'      },

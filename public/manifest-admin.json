@@ -1,0 +1,14 @@
+{
+  "name": "El Encino Admin",
+  "short_name": "Encino Admin",
+  "description": "Administración y check-in — Hotel El Encino",
+  "start_url": "/admin",
+  "scope": "/admin",
+  "display": "standalone",
+  "background_color": "#283820",
+  "theme_color": "#283820",
+  "icons": [
+    { "src": "/logo.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
