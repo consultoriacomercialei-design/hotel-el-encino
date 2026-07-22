@@ -191,7 +191,7 @@ export default function Navbar() {
                   pointerEvents: 'auto',
                 }}
               >
-                El Encino
+                El Encino Santiago
               </motion.a>
             )}
           </AnimatePresence>

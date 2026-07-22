@@ -201,6 +201,25 @@ export default function Hero() {
             </motion.div>
           </div>
 
+          {/* Line 3: Santiago (warm accent) */}
+          <div style={{ overflow: 'hidden', lineHeight: '0.95' }}>
+            <motion.div
+              initial={{ y: '105%' }}
+              animate={{ y: '0%' }}
+              transition={{ duration: 1.0, delay: 0.82, ease: [0.23, 1, 0.32, 1] }}
+              style={{
+                fontFamily: 'var(--serif)',
+                fontSize: 'clamp(2.6rem, 8vw, 6.5rem)',
+                fontWeight: 400,
+                color: 'var(--warm)',
+                letterSpacing: '-0.02em',
+                lineHeight: '0.95',
+              }}
+            >
+              Santiago
+            </motion.div>
+          </div>
+
           {/* Decorative line — sweeps in */}
           <div style={{ overflow: 'hidden', height: '1px', marginTop: '1.5rem', marginBottom: '1.5rem' }}>
             <motion.div

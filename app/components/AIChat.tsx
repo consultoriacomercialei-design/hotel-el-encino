@@ -38,7 +38,7 @@ export default function AIChat() {
       if (messages.length === 0) {
         setMessages([{
           role: 'assistant',
-          content: '¡Hola! Soy el asistente de Hotel El Encino. ¿En qué puedo ayudarte? 🏨',
+          content: '¡Hola! Soy el asistente de Hotel El Encino Santiago. ¿En qué puedo ayudarte? 🏨',
         }]);
       }
       setTimeout(() => inputRef.current?.focus(), 300);
@@ -181,7 +181,7 @@ export default function AIChat() {
               </div>
               <div>
                 <p style={{ fontFamily: 'var(--serif)', fontSize: '0.85rem', color: 'var(--ink)', letterSpacing: '0.05em', lineHeight: 1.2 }}>
-                  El Encino
+                  El Encino Santiago
                 </p>
                 <p style={{ fontFamily: 'var(--sans)', fontSize: '0.62rem', color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                   Asistente · En línea

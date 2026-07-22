@@ -231,7 +231,7 @@ export default function Footer() {
                 color: 'var(--paper)',
                 margin: 0,
               }}>
-                Hotel El Encino
+                Hotel El Encino Santiago
               </p>
             </div>
             <p style={{
