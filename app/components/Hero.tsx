@@ -201,8 +201,9 @@ export default function Hero() {
             </motion.div>
           </div>
 
-          {/* Line 3: Santiago (warm accent) — paddingBottom evita que el overflow:hidden recorte la cola de la "g" */}
-          <div style={{ overflow: 'hidden', lineHeight: '0.95', paddingBottom: '0.22em' }}>
+          {/* Line 3: Santiago (warm accent) — lineHeight amplio + paddingBottom EN EL TEXTO
+              (em = el tamaño grande) para que el overflow:hidden no recorte la cola de la "g" */}
+          <div style={{ overflow: 'hidden' }}>
             <motion.div
               initial={{ y: '105%' }}
               animate={{ y: '0%' }}
@@ -213,7 +214,8 @@ export default function Hero() {
                 fontWeight: 400,
                 color: 'var(--warm)',
                 letterSpacing: '-0.02em',
-                lineHeight: '1.02',
+                lineHeight: '1.15',
+                paddingBottom: '0.14em',
               }}
             >
               Santiago
