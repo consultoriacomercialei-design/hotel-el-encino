@@ -6,6 +6,8 @@ interface Reservation {
   id: string;
   folio: string;
   guest_name: string;
+  guest_email: string | null;
+  guest_phone: string | null;
   room_label: string;
   check_in: string;
   check_out: string;
@@ -56,6 +58,9 @@ export default function ScannerClient() {
 
   // Formulario de check-in
   const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [nationality, setNationality] = useState('Mexicana');
   const [docType, setDocType] = useState('ine');
   const [docNumber, setDocNumber] = useState('');
   const [photo, setPhoto] = useState<File | null>(null);
@@ -92,6 +97,9 @@ export default function ScannerClient() {
         setReservation(data.reservation);
         setPriorCheckins(data.checkins || []);
         setFullName(data.reservation.guest_name || '');
+        setEmail(data.reservation.guest_email || '');
+        setPhone(data.reservation.guest_phone || '');
+        setNationality('Mexicana');
         setDocType('ine');
         setDocNumber('');
         setPhoto(null);
@@ -169,6 +177,9 @@ export default function ScannerClient() {
       const fd = new FormData();
       fd.set('reservation_id', reservation.id);
       fd.set('full_name', fullName.trim());
+      fd.set('email', email.trim());
+      fd.set('phone', phone.trim());
+      fd.set('nationality', nationality.trim());
       fd.set('id_doc_type', docType);
       fd.set('id_doc_number', docNumber.trim());
       if (photo) fd.set('photo', photo);
@@ -183,7 +194,10 @@ export default function ScannerClient() {
         ...p,
         { id: crypto.randomUUID(), full_name: fullName.trim(), id_doc_type: docType, id_doc_number: docNumber.trim() || null, checked_in_at: new Date().toISOString() },
       ]);
+      // Limpia para el siguiente acompañante.
       setFullName('');
+      setEmail('');
+      setPhone('');
       setDocNumber('');
       setPhoto(null);
     } catch {
@@ -280,6 +294,20 @@ export default function ScannerClient() {
               <div>
                 <label style={{ fontSize: '0.82rem', color: '#6b6b6b' }}>Nombre completo</label>
                 <input value={fullName} onChange={(e) => setFullName(e.target.value)} required style={field} />
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.82rem', color: '#6b6b6b' }}>Correo</label>
+                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="correo@ejemplo.com" style={field} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.82rem', color: '#6b6b6b' }}>Teléfono</label>
+                  <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="81 1234 5678" style={field} />
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: '0.82rem', color: '#6b6b6b' }}>Nacionalidad</label>
+                <input value={nationality} onChange={(e) => setNationality(e.target.value)} placeholder="Mexicana" style={field} />
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <div style={{ flex: '0 0 40%' }}>

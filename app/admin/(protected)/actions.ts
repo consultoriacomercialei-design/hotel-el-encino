@@ -51,6 +51,30 @@ export async function registerCheckinAction(
   }
   try {
     await supabasePatch('reservations', id, patch);
+    // Unificación: alimenta el mismo registro de clientes que el escáner, con el
+    // correo/teléfono del titular (best-effort — no rompe el check-in si falla).
+    try {
+      const rows = await supabaseGet<{ folio: string; guest_name: string; guest_email: string | null; guest_phone: string | null }>(
+        'reservations',
+        { id: `eq.${id}`, select: 'folio,guest_name,guest_email,guest_phone', limit: '1' }
+      );
+      const res = rows[0];
+      if (res) {
+        await supabasePost('guest_checkins', {
+          reservation_id: id,
+          folio: res.folio,
+          full_name: res.guest_name,
+          email: res.guest_email || null,
+          phone: res.guest_phone || null,
+          nationality: data.nationality.trim() || null,
+          date_of_birth: data.date_of_birth && /^\d{4}-\d{2}-\d{2}$/.test(data.date_of_birth) ? data.date_of_birth : null,
+          id_doc_type: data.id_type.toLowerCase(),
+          id_doc_number: data.id_number.trim().toUpperCase() || null,
+        });
+      }
+    } catch (e) {
+      console.error('[registerCheckin] guest_checkins insert failed', e);
+    }
     return { ok: true };
   } catch (err) {
     return { ok: false, error: String(err) };

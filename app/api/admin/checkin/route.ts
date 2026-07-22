@@ -30,6 +30,10 @@ export async function POST(req: NextRequest) {
 
   const reservationId = String(form.get('reservation_id') || '').trim();
   const fullName = String(form.get('full_name') || '').trim();
+  const email = String(form.get('email') || '').trim().toLowerCase();
+  const phone = String(form.get('phone') || '').trim();
+  const nationality = String(form.get('nationality') || '').trim();
+  const dob = String(form.get('date_of_birth') || '').trim();
   const docType = String(form.get('id_doc_type') || '').trim().toLowerCase();
   const docNumber = String(form.get('id_doc_number') || '').trim().toUpperCase();
   const photo = form.get('photo');
@@ -84,6 +88,10 @@ export async function POST(req: NextRequest) {
       reservation_id: reservationId,
       folio: reservation.folio,
       full_name: fullName,
+      email: email || null,
+      phone: phone || null,
+      nationality: nationality || null,
+      date_of_birth: /^\d{4}-\d{2}-\d{2}$/.test(dob) ? dob : null,
       id_doc_type: docType,
       id_doc_number: docNumber || null,
       id_doc_photo_path: photoPath,
@@ -100,6 +108,8 @@ export async function POST(req: NextRequest) {
     id_verified: true,
     id_verified_at: new Date().toISOString(),
   };
+  if (nationality) patch.nationality = nationality;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dob)) patch.date_of_birth = dob;
   if (!reservation.checkin_at) patch.checkin_at = new Date().toISOString();
   await supabasePatch('reservations', reservationId, patch);
 

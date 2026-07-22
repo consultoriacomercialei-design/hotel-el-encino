@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { findByCheckinCode, roomLabel, passServable } from '@/app/lib/wallet/lookup';
+import { findByCheckinCode, roomLabel, passServable, guestCount } from '@/app/lib/wallet/lookup';
 import { buildGoogleHotelSaveUrl, googleWalletConfigured } from '@/app/lib/wallet/google-pass';
 
 export const dynamic = 'force-dynamic';
@@ -27,6 +27,7 @@ export async function GET(
       folio: r.folio,
       guestName: r.guest_name,
       roomLabel: roomLabel(r.room_type),
+      guests: guestCount(r),
       checkIn: r.check_in,
       checkOut: r.check_out,
     });

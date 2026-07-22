@@ -1,5 +1,5 @@
 import { headers } from 'next/headers';
-import { findByCheckinCode, roomLabel, passServable } from '@/app/lib/wallet/lookup';
+import { findByCheckinCode, roomLabel, passServable, guestCount } from '@/app/lib/wallet/lookup';
 
 export const dynamic = 'force-dynamic';
 
@@ -90,7 +90,9 @@ export default async function WalletBridge({
         <p style={{ color: '#c9d4c2', fontFamily: 'monospace', margin: '0 0 20px' }}>{r!.folio}</p>
 
         <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: '16px 18px', textAlign: 'left', margin: '0 0 22px', fontSize: '0.92rem' }}>
+          <p style={{ margin: '0 0 6px' }}><strong>A nombre de:</strong> {r!.guest_name}</p>
           <p style={{ margin: '0 0 6px' }}><strong>Habitación:</strong> {roomLabel(r!.room_type)}</p>
+          <p style={{ margin: '0 0 6px' }}><strong>Huéspedes:</strong> {guestCount(r!)}</p>
           <p style={{ margin: '0 0 6px' }}><strong>Llegada:</strong> {fmt(r!.check_in)}</p>
           <p style={{ margin: 0 }}><strong>Salida:</strong> {fmt(r!.check_out)}</p>
         </div>

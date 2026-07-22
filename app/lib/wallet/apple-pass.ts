@@ -17,6 +17,7 @@ export interface HotelPassInput {
   folio: string;
   guestName: string;
   roomLabel: string;
+  guests: number;
   checkIn: string; // YYYY-MM-DD
   checkOut: string; // YYYY-MM-DD
 }
@@ -98,6 +99,7 @@ export async function buildHotelPass(input: HotelPassInput): Promise<Buffer> {
 
   pass.auxiliaryFields.push(
     { key: 'room', label: 'HABITACIÓN', value: input.roomLabel },
+    { key: 'guests', label: 'HUÉSPEDES', value: String(input.guests) },
     { key: 'holder', label: 'A NOMBRE DE', value: input.guestName }
   );
 

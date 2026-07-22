@@ -9,7 +9,8 @@ interface ResRow {
   id: string;
   folio: string;
   guest_name: string;
-  guest_phone: string;
+  guest_email: string | null;
+  guest_phone: string | null;
   room_type: string;
   check_in: string;
   check_out: string;
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
   const rows = await supabaseGet<ResRow>('reservations', {
     ...where,
     select:
-      'id,folio,guest_name,guest_phone,room_type,check_in,check_out,nights,total_mxn,adults,children,status,checkin_at',
+      'id,folio,guest_name,guest_email,guest_phone,room_type,check_in,check_out,nights,total_mxn,adults,children,status,checkin_at',
     limit: '1',
   });
   const r = rows[0];

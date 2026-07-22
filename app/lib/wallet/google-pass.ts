@@ -39,6 +39,7 @@ export interface GoogleHotelPassInput {
   folio: string;
   guestName: string;
   roomLabel: string;
+  guests: number;
   checkIn: string; // YYYY-MM-DD
   checkOut: string; // YYYY-MM-DD
 }
@@ -78,6 +79,7 @@ export function buildGoogleHotelSaveUrl(input: GoogleHotelPassInput): string {
     textModulesData: [
       { id: 'checkin', header: 'LLEGADA', body: input.checkIn },
       { id: 'checkout', header: 'SALIDA', body: input.checkOut },
+      { id: 'guests', header: 'HUÉSPEDES', body: String(input.guests) },
       { id: 'holder', header: 'A NOMBRE DE', body: input.guestName },
     ],
     barcode: {
