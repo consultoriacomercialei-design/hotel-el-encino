@@ -7,8 +7,9 @@ import { logEmailSent } from './supabase';
 import { parseAnticipoFromNotes } from './balance';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const HOTEL_EMAIL = process.env.HOTEL_EMAIL || 'elencino_22@hotmail.com';
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'consultoriacomercialei@gmail.com';
+// .trim(): las envs de Vercel a veces llegan con \n colado al final.
+const HOTEL_EMAIL = (process.env.HOTEL_EMAIL || 'elencino_22@hotmail.com').trim();
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'consultoriacomercialei@gmail.com').trim();
 const FROM = 'Hotel El Encino <reservaciones@hotelelencino.com>';
 
 export interface ReservationPayload {
