@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
-  let body: { reservation_id?: string; action?: string };
+  let body: { reservation_id?: string; action?: string; guest_notes?: string | null };
   try {
     body = await req.json();
   } catch {
@@ -52,6 +52,9 @@ export async function POST(req: NextRequest) {
   }
   const reservationId = body.reservation_id ?? '';
   const action = body.action === 'cancelled' ? 'cancelled' : 'confirmed';
+  // Comentarios del huésped (los manda el Directorio en el payload) — para que
+  // el anfitrión los vea en SU correo de "Nueva reservación".
+  const guestNotes = typeof body.guest_notes === 'string' ? body.guest_notes.trim() : '';
   if (!UUID_RE.test(reservationId)) {
     return NextResponse.json({ error: 'reservation_id inválido' }, { status: 400 });
   }
@@ -91,7 +94,7 @@ export async function POST(req: NextRequest) {
       await findAndDeleteCalendarEventsByFolio(r.folio);
       await Promise.all([
         createCalendarEvent(calPayload, r.folio, '2'),
-        sendDirectorioNewReservationEmail(r),
+        sendDirectorioNewReservationEmail(r, guestNotes),
       ]);
     } else {
       await findAndDeleteCalendarEventsByFolio(r.folio);

@@ -847,9 +847,13 @@ export async function sendCheckoutEmail(r: FullReservation): Promise<{ ok: boole
 // Directorio con su pase y QR, no se le duplica confirmación.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export async function sendDirectorioNewReservationEmail(r: FullReservation) {
+export async function sendDirectorioNewReservationEmail(r: FullReservation, guestNotes: string = '') {
   const room = ROOM_LABELS[r.room_type] || r.room_type;
   const icsBase64 = Buffer.from(generateICS(r, r.id, r.folio)).toString('base64');
+  // Escapa el comentario del huésped (entrada de usuario) antes de meterlo al HTML.
+  const notesEsc = guestNotes
+    ? guestNotes.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    : '';
   const result = await sendEmail({
     from: FROM, to: [HOTEL_EMAIL, ADMIN_EMAIL],
     subject: `🏨 Nueva reservación (Directorio) — ${r.guest_name} · ${formatDate(r.check_in)}`,
@@ -859,6 +863,11 @@ export async function sendDirectorioNewReservationEmail(r: FullReservation) {
         <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;margin-bottom:14px">
           <p style="margin:0;color:#166534;font-size:0.9rem">✓ <strong>Pagada en línea en el Directorio.</strong> No cobrar hospedaje al huésped.</p>
         </div>
+        ${notesEsc ? `
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;margin-bottom:14px">
+          <p style="margin:0 0 4px;color:#92400e;font-weight:700;font-size:0.9rem">💬 Comentarios / solicitudes del huésped</p>
+          <p style="margin:0;color:#333;white-space:pre-wrap">${notesEsc}</p>
+        </div>` : ''}
         <p><strong>Folio:</strong> ${r.folio}</p>
         <p><strong>Nombre:</strong> ${r.guest_name}</p>
         <p><strong>Email:</strong> ${r.guest_email}</p>
@@ -869,7 +878,6 @@ export async function sendDirectorioNewReservationEmail(r: FullReservation) {
         <p><strong>Noches:</strong> ${r.nights}</p>
         ${guestRowsText(r)}
         <p><strong>Total pagado:</strong> $${r.total_mxn.toLocaleString('es-MX')} MXN</p>
-        ${r.notes ? `<p><strong>Notas:</strong> ${r.notes}</p>` : ''}
         <hr />
         <p style="font-size:0.8rem;color:#6b6b6b">Adjunto: .ics para abrir en calendario. O suscribe al feed: <a href="https://hotelelencino.com/api/calendar">hotelelencino.com/api/calendar</a></p>
       </div>
