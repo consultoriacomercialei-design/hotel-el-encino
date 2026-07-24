@@ -16,6 +16,7 @@ import {
   sendPendingPaymentEmails,
   type ReservationPayload, type FullReservation, type LineItem,
 } from '@/app/lib/emails';
+import { propagateDirectorioCancel } from '@/app/lib/directorio-cancel';
 
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
 
@@ -223,6 +224,11 @@ export async function patchReservationAction(id: string, action: string) {
     }, true);
     const newStatus = reason === 'refund' ? 'refund_pending' : 'cancelled';
     await supabasePatch('reservations', id, { status: newStatus });
+
+    // Si es un espejo del Directorio, liberar también su reserva en la app iOS.
+    // (Este server action es el flujo real del botón Cancelar / "cancelación
+    // interna" del detalle de reservación — antes solo el API route propagaba.)
+    await propagateDirectorioCancel(rows[0]?.notes);
 
     // Always clean up Google Calendar — fire and forget, non-blocking
     if (rows[0]?.folio) {

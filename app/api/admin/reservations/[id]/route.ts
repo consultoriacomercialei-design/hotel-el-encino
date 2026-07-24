@@ -11,6 +11,7 @@ import { supabasePatch, supabaseGet, supabaseDelete } from '@/app/lib/supabase';
 import { limiters, getClientIP, tooManyRequests } from '@/app/lib/rate-limit';
 import { createCalendarEvent, type CalendarPayload } from '@/app/lib/google-calendar';
 import { sendConfirmedEmails, sendPaymentConfirmedEmails, type FullReservation, type LineItem } from '@/app/lib/emails';
+import { propagateDirectorioCancel } from '@/app/lib/directorio-cancel';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -35,41 +36,6 @@ const ALLOWED_ACTIONS = ['confirm', 'mark_paid', 'cancel', 'no_show', 'edit'] as
 
 const VALID_ROOM_TYPES = ['suite', 'doble', 'grupal'] as const;
 const VALID_PAYMENT_METHODS = ['online', 'pending', 'cash', 'transfer', 'card'] as const;
-
-// Las reservas del Directorio Santiago se espejan aquí con este prefijo en
-// `notes` y el UUID de la reserva original del Directorio.
-const DIRECTORIO_ID_RE =
-  /Reserva Directorio Santiago\s+([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
-
-/**
- * Si la reservación es un ESPEJO de una reserva del Directorio, propaga la
- * cancelación de vuelta al Directorio para que se libere en su app (antes el
- * espejo era de un solo sentido: cancelar aquí no la borraba en iOS).
- * Best-effort: nunca rompe la cancelación del lado hotel. NO reembolsa
- * (refund:false) — el reembolso lo decide el anfitrión por separado.
- */
-async function propagateDirectorioCancel(notes: string | null | undefined): Promise<void> {
-  const directorioId = notes?.match(DIRECTORIO_ID_RE)?.[1];
-  if (!directorioId) return;
-
-  const secret = process.env.ADMIN_ACTION_SECRET;
-  if (!secret) {
-    console.error('[admin/reservations] ADMIN_ACTION_SECRET ausente — no se propagó al Directorio');
-    return;
-  }
-  const base = (process.env.SANTIAPP_API_URL || 'https://directoriosantiago.com').replace(/\/$/, '');
-  try {
-    const res = await fetch(`${base}/api/admin/lodgings/reservations/${directorioId}/cancel`, {
-      method: 'POST',
-      headers: { 'x-admin-secret': secret, 'content-type': 'application/json' },
-      body: JSON.stringify({ refund: false }),
-      cache: 'no-store',
-    });
-    if (!res.ok) console.error(`[admin/reservations] propagación Directorio → HTTP ${res.status}`);
-  } catch (e: unknown) {
-    console.error('[admin/reservations] propagación Directorio falló', e);
-  }
-}
 
 export async function PATCH(req: NextRequest, { params }: Params) {
   if (!limiters.admin(getClientIP(req))) return tooManyRequests();
