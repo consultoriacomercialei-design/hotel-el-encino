@@ -6,8 +6,32 @@
  */
 import { DEFAULT_PRICES, DEFAULT_ADDONS, DEFAULT_SEASONS } from './hotel-config-defaults';
 import type { RoomPrices, Season, Addon } from './pricing';
+import { DEFAULT_FISCAL, type FiscalConfig } from './cfdi-hospedaje';
 
 export type { RoomPrices };
+
+/**
+ * Tasas fiscales (IVA / ISH / retención ISR) desde `hotel_settings` (key `fiscal`),
+ * con los defaults como respaldo. Si el ISH de Nuevo León cambia, se edita en la
+ * base — no se hardcodea río abajo.
+ */
+export async function fetchFiscalConfig(): Promise<FiscalConfig> {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return DEFAULT_FISCAL;
+
+  try {
+    const res = await fetch(`${url}/rest/v1/hotel_settings?select=value&key=eq.fiscal`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}`, 'Cache-Control': 'no-store' },
+      cache: 'no-store',
+    });
+    if (!res.ok) return DEFAULT_FISCAL;
+    const rows: { value: Partial<FiscalConfig> }[] = await res.json();
+    return { ...DEFAULT_FISCAL, ...(rows[0]?.value ?? {}) };
+  } catch {
+    return DEFAULT_FISCAL;
+  }
+}
 
 export async function fetchRoomPrices(): Promise<RoomPrices> {
   const url = process.env.SUPABASE_URL;

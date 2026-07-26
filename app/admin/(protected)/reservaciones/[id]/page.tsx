@@ -8,8 +8,9 @@ import { supabaseGet } from '@/app/lib/supabase';
 import ReservationDetailActions from './ReservationDetailActions';
 import InvoiceSection from './InvoiceSection';
 import { getInvoicesForReservation } from '../../invoice-actions';
-import { isFacturapiConfigured } from '@/app/lib/facturapi';
+import { isFacturapiConfigured, isTestMode } from '@/app/lib/facturapi';
 import { getBlacklistEntry } from '@/app/lib/blacklist';
+import { fetchFiscalConfig } from '@/app/lib/hotel-config';
 import { getAnticipo, getBalanceDue } from '@/app/lib/balance';
 
 interface LineItem {
@@ -126,7 +127,7 @@ export default async function ReservationDetailPage({
   const r = rows[0];
   if (!r) notFound();
 
-  const [invoices, blacklistEntry, emailLog] = await Promise.all([
+  const [invoices, blacklistEntry, emailLog, fiscal] = await Promise.all([
     getInvoicesForReservation(r.id),
     getBlacklistEntry(r.guest_email),
     supabaseGet<EmailLogEntry>('email_log', {
@@ -134,6 +135,7 @@ export default async function ReservationDetailPage({
       select: 'id,email_type,recipient_email,subject,sent_at,opened_at,clicked_at,bounced_at,delivered_at',
       order: 'sent_at.desc',
     }),
+    fetchFiscalConfig(),
   ]);
 
   const s = STATUS_LABELS[r.status] || { label: r.status, bg: '#f5f5f5', color: '#555' };
@@ -484,6 +486,7 @@ export default async function ReservationDetailPage({
             guest_name:     r.guest_name,
             guest_email:    r.guest_email,
             check_in:       r.check_in,
+            check_out:      r.check_out,
             nights:         r.nights,
             total_mxn:      r.total_mxn,
             payment_method: r.payment_method,
@@ -491,6 +494,8 @@ export default async function ReservationDetailPage({
           }}
           existingInvoices={invoices}
           configured={isFacturapiConfigured()}
+          testMode={isTestMode()}
+          fiscal={fiscal}
         />
 
       </div>
