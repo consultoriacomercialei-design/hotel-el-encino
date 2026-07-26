@@ -1,8 +1,10 @@
 'use server';
 
 import { cookies } from 'next/headers';
+import { revalidateTag } from 'next/cache';
 import { verifyAdminToken } from '@/app/lib/admin-auth';
 import { findAndDeleteCalendarEventsByFolio } from '@/app/lib/google-calendar';
+import { HOTEL_SETTINGS_TAG } from '@/app/lib/hotel-config';
 import type { Season } from '@/app/lib/pricing';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -27,6 +29,16 @@ async function upsertSetting(key: string, value: unknown) {
     body: JSON.stringify({ key, value, updated_at: new Date().toISOString() }),
   });
   if (!res.ok) throw new Error(`Supabase error: ${await res.text()}`);
+
+  // Tira el caché de config en cuanto se guarda: la web y la app ven el precio
+  // nuevo en la siguiente petición, sin esperar el TTL. Va después del throw a
+  // propósito — si el guardado falló, el caché viejo sigue siendo el correcto.
+  //
+  // `{ expire: 0 }` y no `'max'`: 'max' sirve stale-while-revalidate, o sea que
+  // el siguiente visitante todavía vería el precio ANTERIOR mientras refresca en
+  // segundo plano. Aquí no aplica — el servidor recalcula con esta config el
+  // total que se le cobra al huésped, así que tiene que ser exacto de inmediato.
+  revalidateTag(HOTEL_SETTINGS_TAG, { expire: 0 });
 }
 
 /**

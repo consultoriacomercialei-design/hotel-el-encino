@@ -5,44 +5,17 @@
  * Cached 5 min on CDN, stale-while-revalidate 1 min.
  */
 import { NextResponse } from 'next/server';
-import { DEFAULT_PRICES, DEFAULT_ADDONS, DEFAULT_SEASONS } from '@/app/lib/hotel-config-defaults';
-
-const SUPABASE_URL         = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+import { fetchPricingConfig } from '@/app/lib/hotel-config';
 
 export async function GET() {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-    return NextResponse.json({ prices: DEFAULT_PRICES, addons: DEFAULT_ADDONS, seasons: DEFAULT_SEASONS });
-  }
+  // Reusa `fetchPricingConfig`, que ya hace exactamente esta consulta con el
+  // mismo merge contra los defaults y ahora está cacheada con la etiqueta
+  // `hotel-settings`. Antes eran dos rutas paralelas al mismo dato: cada fallo
+  // de caché del CDN golpeaba Supabase de nuevo. La respuesta es idéntica.
+  const { prices, addons, seasons } = await fetchPricingConfig();
 
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/hotel_settings?select=key,value&key=in.(room_prices,addons,seasons)`,
-      {
-        headers: {
-          apikey: SUPABASE_SERVICE_KEY,
-          Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
-          'Cache-Control': 'no-store',
-        },
-      }
-    );
-
-    if (!res.ok) throw new Error(`Supabase ${res.status}`);
-
-    const rows: { key: string; value: unknown }[] = await res.json();
-    const map = Object.fromEntries(rows.map(r => [r.key, r.value]));
-
-    return NextResponse.json(
-      {
-        // Merge con defaults: garantiza que base_occupancy/max_occupancy (y
-        // cualquier campo nuevo) estén presentes aunque la fila de la DB sea vieja.
-        prices:  { ...DEFAULT_PRICES, ...((map.room_prices as Partial<typeof DEFAULT_PRICES>) ?? {}) },
-        addons:  (map.addons      as typeof DEFAULT_ADDONS)  ?? DEFAULT_ADDONS,
-        seasons: (map.seasons     as typeof DEFAULT_SEASONS) ?? DEFAULT_SEASONS,
-      },
-      { headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate=60' } }
-    );
-  } catch {
-    return NextResponse.json({ prices: DEFAULT_PRICES, addons: DEFAULT_ADDONS, seasons: DEFAULT_SEASONS });
-  }
+  return NextResponse.json(
+    { prices, addons, seasons },
+    { headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate=60' } }
+  );
 }
