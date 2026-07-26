@@ -919,3 +919,54 @@ export async function sendDirectorioCancelledEmail(r: FullReservation) {
   });
   return result;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONTABILIDAD — paquete mensual de facturas para la contadora
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function sendAccountingPackage(opts: {
+  to: string;
+  month: string;              // "YYYY-MM"
+  filename: string;
+  zipBase64: string;
+  count: number;
+  totalMxn: number;
+  missing: string[];
+}) {
+  const [y, m] = opts.month.split('-').map(Number);
+  const nombreMes = new Date(Date.UTC(y, m - 1, 1))
+    .toLocaleDateString('es-MX', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+
+  return sendEmail({
+    from: FROM,
+    to: [opts.to],
+    cc: [ADMIN_EMAIL],
+    subject: `Facturas emitidas — ${nombreMes} · Hotel El Encino`,
+    html: `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto">
+        <h3 style="margin:0 0 14px">Facturas de ${nombreMes}</h3>
+        <p>Adjunto el paquete del mes con los CFDI emitidos por Hotel El Encino
+           (RFC LEMH941020J13).</p>
+        <div style="background:#f5f3ef;border-radius:10px;padding:14px 16px;margin:14px 0">
+          <p style="margin:0 0 6px"><strong>${opts.count}</strong> factura(s) vigente(s)</p>
+          <p style="margin:0"><strong>$${opts.totalMxn.toLocaleString('es-MX', { minimumFractionDigits: 2 })} MXN</strong> facturados</p>
+        </div>
+        <p>El ZIP trae:</p>
+        <ul style="color:#444">
+          <li><strong>resumen-${opts.month}.xlsx</strong> — todas las facturas con subtotal, IVA, ISH, retención de ISR y total</li>
+          <li><strong>vigentes/</strong> — XML y PDF de cada CFDI vigente</li>
+          <li><strong>canceladas/</strong> — las canceladas del mes, si las hubo</li>
+        </ul>
+        ${opts.missing.length ? `
+        <div style="background:#fff8e1;border:1px solid #f39c1240;border-radius:10px;padding:12px 14px">
+          <p style="margin:0;color:#856d47;font-size:0.88rem"><strong>Nota:</strong> no se pudieron
+          incluir estos archivos: ${opts.missing.join(', ')}. Se pueden descargar del portal del SAT.</p>
+        </div>` : ''}
+        <hr style="margin:18px 0;border:none;border-top:1px solid #e8e4de" />
+        <p style="font-size:0.8rem;color:#6b6b6b">Envío automático el día 1 de cada mes.
+        Cualquier duda, responde a este correo.</p>
+      </div>
+    `,
+    attachments: [{ filename: opts.filename, content: opts.zipBase64 }],
+  });
+}

@@ -162,3 +162,18 @@ export async function loadSettingsAction(): Promise<{
     seasons: (map.seasons as Season[])               ?? DEFAULT_SEASONS,
   };
 }
+
+/**
+ * Correo de la contadora. Es a donde va el paquete mensual de facturas
+ * (ZIP con XML/PDF + resumen en Excel) el día 1 de cada mes.
+ * Sin esto configurado, el cron no manda nada — falla cerrado a propósito.
+ */
+export async function saveAccountingAction(email: string) {
+  await requireAuth();
+  const clean = email.trim();
+  if (clean && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(clean)) {
+    throw new Error('El correo de la contadora no es válido.');
+  }
+  await upsertSetting('accounting', { email: clean });
+  return { ok: true };
+}

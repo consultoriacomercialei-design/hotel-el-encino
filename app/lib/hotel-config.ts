@@ -10,6 +10,35 @@ import { DEFAULT_FISCAL, type FiscalConfig } from './cfdi-hospedaje';
 
 export type { RoomPrices };
 
+export interface AccountingConfig {
+  /** Correo de la contadora. Vacío = el envío mensual no se dispara. */
+  email: string;
+}
+
+/**
+ * Config de contabilidad desde `hotel_settings` (key `accounting`).
+ * Falla cerrado a propósito: sin correo configurado, el cron mensual no manda
+ * nada en vez de adivinar un destinatario.
+ */
+export async function fetchAccountingConfig(): Promise<AccountingConfig> {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const fallback: AccountingConfig = { email: '' };
+  if (!url || !key) return fallback;
+
+  try {
+    const res = await fetch(`${url}/rest/v1/hotel_settings?select=value&key=eq.accounting`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}`, 'Cache-Control': 'no-store' },
+      cache: 'no-store',
+    });
+    if (!res.ok) return fallback;
+    const rows: { value: Partial<AccountingConfig> }[] = await res.json();
+    return { email: (rows[0]?.value?.email ?? '').trim() };
+  } catch {
+    return fallback;
+  }
+}
+
 /**
  * Tasas fiscales (IVA / ISH / retención ISR) desde `hotel_settings` (key `fiscal`),
  * con los defaults como respaldo. Si el ISH de Nuevo León cambia, se edita en la

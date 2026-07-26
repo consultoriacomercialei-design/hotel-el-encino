@@ -6,9 +6,14 @@ import { loadSettingsAction } from './actions';
 import ConfigForm from './ConfigForm';
 import SeasonsEditor from './SeasonsEditor';
 import CalendarCleanupTool from './CalendarCleanupTool';
+import AccountingForm from './AccountingForm';
+import { fetchAccountingConfig } from '@/app/lib/hotel-config';
 
 export default async function ConfiguracionPage() {
-  const { prices, addons, seasons } = await loadSettingsAction();
+  const [{ prices, addons, seasons }, accounting] = await Promise.all([
+    loadSettingsAction(),
+    fetchAccountingConfig(),
+  ]);
 
   return (
     <div style={{ maxWidth: '720px' }}>
@@ -21,6 +26,9 @@ export default async function ConfiguracionPage() {
 
       <ConfigForm initialPrices={prices} initialAddons={addons} />
       <SeasonsEditor initialSeasons={seasons} />
+      <div style={{ marginTop: '20px' }}>
+        <AccountingForm initialEmail={accounting.email} />
+      </div>
       <CalendarCleanupTool />
     </div>
   );
