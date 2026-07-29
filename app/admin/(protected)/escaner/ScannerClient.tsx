@@ -39,16 +39,33 @@ function extractCode(raw: string): string {
   return m ? decodeURIComponent(m[1]) : raw.trim();
 }
 
+/* Motor ÚNICO: jsQR sobre canvas. El ponyfill de BarcodeDetector (zxing-wasm)
+ * se abandonó: su .wasm se carga aparte y si esa carga falla (Safari iOS en
+ * campo) el detect() truena por frame SIN error visible — cámara viva,
+ * decodificación muerta. jsQR es puro JS, sin descargas, y a 4-5 lecturas/seg
+ * sobre 640px sobra en cualquier teléfono. */
+type JsQrFn = (
+  data: Uint8ClampedArray,
+  width: number,
+  height: number
+) => { data: string } | null;
+
 export default function ScannerClient() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number>(0);
-  const detectorRef = useRef<{ detect: (v: HTMLVideoElement) => Promise<{ rawValue: string }[]> } | null>(null);
+  const jsqrRef = useRef<JsQrFn | null>(null);
+  const lastTickRef = useRef(0);
+  const lastSeenRef = useRef<{ code: string; at: number }>({ code: '', at: 0 });
   const scanningRef = useRef(false);
   const busyRef = useRef(false);
 
   const [camActive, setCamActive] = useState(false);
   const [camError, setCamError] = useState('');
+  // Diagnóstico visible: cuadros analizados. Si no avanza, el loop no corre;
+  // si no aparece, el navegador sirve una versión vieja de esta página.
+  const [frames, setFrames] = useState(0);
   const [folioInput, setFolioInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -114,26 +131,49 @@ export default function ScannerClient() {
     [stopCamera]
   );
 
-  const loop = useCallback(async () => {
-    if (!scanningRef.current || !videoRef.current || !detectorRef.current) return;
+  const loop = useCallback(() => {
+    if (!scanningRef.current) return;
+    rafRef.current = requestAnimationFrame(loop);
+
+    const now = performance.now();
+    if (now - lastTickRef.current < 220) return; // ~4-5 lecturas/seg
+    lastTickRef.current = now;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const jsqr = jsqrRef.current;
+    if (!video || !canvas || !jsqr || video.readyState < 2 || video.videoWidth === 0) return;
+
+    const scale = Math.min(1, 640 / video.videoWidth);
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
     try {
-      const codes = await detectorRef.current.detect(videoRef.current);
-      if (codes && codes.length && !busyRef.current) {
-        resolve({ code: extractCode(codes[0].rawValue) });
-        return;
+      const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const hit = jsqr(img.data, img.width, img.height);
+      setFrames((f) => f + 1);
+      if (hit?.data && !busyRef.current) {
+        const code = extractCode(hit.data);
+        // No re-consultar el mismo QR en bucle si el resolve falló (p. ej. 404).
+        if (code !== lastSeenRef.current.code || now - lastSeenRef.current.at > 5000) {
+          lastSeenRef.current = { code, at: now };
+          resolve({ code });
+        }
       }
     } catch {
-      /* frame no listo */
+      /* frame ilegible — sigue el loop */
     }
-    rafRef.current = requestAnimationFrame(loop);
   }, [resolve]);
 
   const startCamera = useCallback(async () => {
     setCamError('');
     try {
-      if (!detectorRef.current) {
-        const mod = await import('barcode-detector/ponyfill');
-        detectorRef.current = new mod.BarcodeDetector({ formats: ['qr_code'] });
+      if (!jsqrRef.current) {
+        const mod = await import('jsqr');
+        jsqrRef.current = mod.default as unknown as JsQrFn;
       }
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' },
@@ -230,8 +270,14 @@ export default function ScannerClient() {
         <>
           <div style={{ position: 'relative', background: '#000', borderRadius: 14, overflow: 'hidden', aspectRatio: '3 / 4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <video ref={videoRef} playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover', display: camActive ? 'block' : 'none' }} />
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
             {camActive && (
               <div style={{ position: 'absolute', inset: 0, boxShadow: 'inset 0 0 0 3px rgba(212,175,55,0.7)', borderRadius: 14, pointerEvents: 'none' }} />
+            )}
+            {camActive && (
+              <p style={{ position: 'absolute', bottom: 6, left: 12, margin: 0, fontSize: '0.62rem', color: 'rgba(255,255,255,0.6)', pointerEvents: 'none' }}>
+                {frames > 0 ? `analizando · ${frames}` : 'iniciando cámara…'}
+              </p>
             )}
             {!camActive && (
               <button onClick={startCamera} style={{ ...btn, background: GOLD, color: '#fff' }}>
