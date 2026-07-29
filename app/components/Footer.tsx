@@ -279,6 +279,12 @@ export default function Footer() {
               >
                 @elencinohospedaje
               </a>
+              <a href="https://directoriosantiago.com" target="_blank" rel="noopener" style={{ fontFamily: 'var(--sans)', fontSize: '0.82rem', color: 'rgba(250,250,250,0.5)', textDecoration: 'none', transition: 'color 0.2s' }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--warm)'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(250,250,250,0.5)'; }}
+              >
+                Directorio Santiago — qué hacer en Santiago, N.L.
+              </a>
             </div>
           </div>
 
