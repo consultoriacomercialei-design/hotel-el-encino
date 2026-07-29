@@ -106,6 +106,7 @@ interface GuestCheckinRow {
   id_doc_type: string | null;
   id_doc_number: string | null;
   id_doc_photo_path: string | null;
+  id_doc_photo_back_path: string | null;
   checked_in_at: string | null;
 }
 
@@ -148,7 +149,7 @@ export default async function ReservationDetailPage({
     fetchFiscalConfig(),
     supabaseGet<GuestCheckinRow>('guest_checkins', {
       reservation_id: `eq.${r.id}`,
-      select: 'id,full_name,nationality,id_doc_type,id_doc_number,id_doc_photo_path,checked_in_at',
+      select: 'id,full_name,nationality,id_doc_type,id_doc_number,id_doc_photo_path,id_doc_photo_back_path,checked_in_at',
       order: 'checked_in_at.asc',
     }).catch(() => [] as GuestCheckinRow[]),
   ]);
@@ -358,15 +359,29 @@ export default async function ReservationDetailPage({
                   {c.checked_in_at && (
                     <span style={{ color: '#999', fontSize: '0.75rem' }}>{formatDateTime(c.checked_in_at)}</span>
                   )}
-                  {c.id_doc_photo_path && (
-                    <a
-                      href={`/api/admin/checkin/photo?path=${encodeURIComponent(c.id_doc_photo_path)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ marginLeft: 'auto', color: '#856d47', fontWeight: 700, fontSize: '0.78rem', textDecoration: 'none' }}
-                    >
-                      📷 Ver identificación
-                    </a>
+                  {(c.id_doc_photo_path || c.id_doc_photo_back_path) && (
+                    <span style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
+                      {c.id_doc_photo_path && (
+                        <a
+                          href={`/api/admin/checkin/photo?path=${encodeURIComponent(c.id_doc_photo_path)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: '#856d47', fontWeight: 700, fontSize: '0.78rem', textDecoration: 'none' }}
+                        >
+                          📷 {c.id_doc_photo_back_path ? 'Frente' : 'Ver identificación'}
+                        </a>
+                      )}
+                      {c.id_doc_photo_back_path && (
+                        <a
+                          href={`/api/admin/checkin/photo?path=${encodeURIComponent(c.id_doc_photo_back_path)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: '#856d47', fontWeight: 700, fontSize: '0.78rem', textDecoration: 'none' }}
+                        >
+                          📷 Reverso
+                        </a>
+                      )}
+                    </span>
                   )}
                 </div>
               ))}

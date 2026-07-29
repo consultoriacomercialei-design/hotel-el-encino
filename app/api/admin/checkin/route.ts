@@ -91,33 +91,43 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'La reservación está cancelada.' }, { status: 409 });
   }
 
-  // Foto del documento → bucket PRIVADO (guardamos el path, nunca URL pública).
+  // Fotos del documento → bucket PRIVADO (guardamos el path, nunca URL
+  // pública). El REVERSO aplica a documentos tipo tarjeta (INE, licencia…).
+  const uploadDocPhoto = async (entry: FormDataEntryValue | null): Promise<string | null> => {
+    if (!entry || typeof entry !== 'object' || !('arrayBuffer' in entry)) return null;
+    const file = entry as File;
+    if (file.size === 0) return null;
+    if (file.size > 8 * 1024 * 1024) throw new Error('too_big');
+    if (!SUPABASE_URL || !SERVICE_KEY) return null;
+    const ext = (file.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+    const path = `${reservationId}/${crypto.randomUUID()}.${ext}`;
+    try {
+      const buf = Buffer.from(await file.arrayBuffer());
+      const up = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`, {
+        method: 'POST',
+        headers: {
+          apikey: SERVICE_KEY,
+          Authorization: `Bearer ${SERVICE_KEY}`,
+          'Content-Type': file.type || 'image/jpeg',
+        },
+        body: new Uint8Array(buf),
+      });
+      if (up.ok) return path;
+      console.error('[checkin] photo upload failed', up.status, await up.text().catch(() => ''));
+      return null;
+    } catch (err) {
+      console.error('[checkin] photo error', err);
+      return null;
+    }
+  };
+
   let photoPath: string | null = null;
-  if (photo && typeof photo === 'object' && 'arrayBuffer' in photo && (photo as File).size > 0) {
-    const file = photo as File;
-    if (file.size > 8 * 1024 * 1024) {
-      return NextResponse.json({ error: 'La foto excede 8 MB.' }, { status: 413 });
-    }
-    if (SUPABASE_URL && SERVICE_KEY) {
-      const ext = (file.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
-      const path = `${reservationId}/${crypto.randomUUID()}.${ext}`;
-      try {
-        const buf = Buffer.from(await file.arrayBuffer());
-        const up = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`, {
-          method: 'POST',
-          headers: {
-            apikey: SERVICE_KEY,
-            Authorization: `Bearer ${SERVICE_KEY}`,
-            'Content-Type': file.type || 'image/jpeg',
-          },
-          body: new Uint8Array(buf),
-        });
-        if (up.ok) photoPath = path;
-        else console.error('[checkin] photo upload failed', up.status, await up.text().catch(() => ''));
-      } catch (err) {
-        console.error('[checkin] photo error', err);
-      }
-    }
+  let photoBackPath: string | null = null;
+  try {
+    photoPath = await uploadDocPhoto(photo);
+    photoBackPath = await uploadDocPhoto(form.get('photo_back'));
+  } catch {
+    return NextResponse.json({ error: 'Una foto excede 8 MB.' }, { status: 413 });
   }
 
   // Registro en la base de clientes.
@@ -133,6 +143,7 @@ export async function POST(req: NextRequest) {
       id_doc_type: docType,
       id_doc_number: docNumber || null,
       id_doc_photo_path: photoPath,
+      id_doc_photo_back_path: photoBackPath,
       checked_in_at: checkinAt,
     });
   } catch (err) {

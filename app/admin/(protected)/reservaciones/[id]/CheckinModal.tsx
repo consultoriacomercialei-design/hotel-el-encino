@@ -8,6 +8,7 @@
  */
 
 import { useState, useTransition } from 'react';
+import { preparePhotoFile } from '@/app/lib/compress-image';
 
 const ID_TYPES = [
   { value: 'ine',       label: 'INE / IFE (México)' },
@@ -17,6 +18,9 @@ const ID_TYPES = [
   { value: 'residente', label: 'Tarjeta de residente' },
   { value: 'otro',      label: 'Otro documento' },
 ];
+
+/** Documentos tipo TARJETA tienen dos caras (frente/reverso); pasaporte una. */
+const HAS_BACK_SIDE = new Set(['ine', 'licencia', 'cedula', 'residente']);
 
 /** Normaliza valores previos ('INE', 'Cédula'…) al slug del selector. */
 function normalizeIdType(v?: string): string {
@@ -56,6 +60,7 @@ export default function CheckinModal({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
   const [photo, setPhoto] = useState<File | null>(null);
+  const [photoBack, setPhotoBack] = useState<File | null>(null);
 
   const [form, setForm] = useState({
     id_type:       normalizeIdType(currentIdType),
@@ -85,7 +90,11 @@ export default function CheckinModal({
       fd.set('nationality', form.nationality);
       if (form.date_of_birth) fd.set('date_of_birth', form.date_of_birth);
       fd.set('checkin_at', new Date(`${todayIso()}T${form.checkin_time}:00`).toISOString());
-      if (photo) fd.set('photo', photo);
+      // Compresión en el cliente (1200px WebP) antes de subir.
+      if (photo) fd.set('photo', await preparePhotoFile(photo, 'id-frente'));
+      if (photoBack && HAS_BACK_SIDE.has(form.id_type)) {
+        fd.set('photo_back', await preparePhotoFile(photoBack, 'id-reverso'));
+      }
       try {
         const res = await fetch('/api/admin/checkin', { method: 'POST', body: fd });
         const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
@@ -191,19 +200,35 @@ export default function CheckinModal({
             </div>
           </div>
 
-          {/* Foto del documento (opcional) */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={labelStyle}>Foto del documento <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(opcional)</span></label>
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={e => setPhoto(e.target.files?.[0] ?? null)}
-              style={{ ...inputStyle, padding: '8px 10px' }}
-            />
-            {photo && (
-              <div style={{ fontSize: '0.72rem', color: '#6b6b6b', marginTop: '4px' }}>
-                {photo.name} · {(photo.size / 1024 / 1024).toFixed(1)} MB
+          {/* Fotos del documento (opcionales; tarjetas = frente y reverso) */}
+          <div style={{ marginBottom: '20px', display: 'grid', gridTemplateColumns: HAS_BACK_SIDE.has(form.id_type) ? '1fr 1fr' : '1fr', gap: '12px' }}>
+            <div>
+              <label style={labelStyle}>
+                {HAS_BACK_SIDE.has(form.id_type) ? 'Foto — frente' : 'Foto del documento'}{' '}
+                <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(opcional)</span>
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={e => setPhoto(e.target.files?.[0] ?? null)}
+                style={{ ...inputStyle, padding: '8px 10px' }}
+              />
+              {photo && <div style={{ fontSize: '0.72rem', color: '#2e7d32', marginTop: '4px' }}>✓ Frente listo</div>}
+            </div>
+            {HAS_BACK_SIDE.has(form.id_type) && (
+              <div>
+                <label style={labelStyle}>
+                  Foto — reverso <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(opcional)</span>
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={e => setPhotoBack(e.target.files?.[0] ?? null)}
+                  style={{ ...inputStyle, padding: '8px 10px' }}
+                />
+                {photoBack && <div style={{ fontSize: '0.72rem', color: '#2e7d32', marginTop: '4px' }}>✓ Reverso listo</div>}
               </div>
             )}
           </div>

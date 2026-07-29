@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { preparePhotoFile } from '@/app/lib/compress-image';
 
 interface Reservation {
   id: string;
@@ -33,6 +34,9 @@ const DOC_LABELS: Record<string, string> = {
   licencia: 'Licencia',
   otro: 'Otro',
 };
+
+/** Documentos tipo TARJETA tienen dos caras (frente/reverso); pasaporte una. */
+const HAS_BACK_SIDE = new Set(['ine', 'licencia', 'cedula', 'residente']);
 
 function extractCode(raw: string): string {
   const m = raw.match(/\/wallet\/([^/?#]+)/);
@@ -81,6 +85,7 @@ export default function ScannerClient() {
   const [docType, setDocType] = useState('ine');
   const [docNumber, setDocNumber] = useState('');
   const [photo, setPhoto] = useState<File | null>(null);
+  const [photoBack, setPhotoBack] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState<string | null>(null);
 
@@ -120,6 +125,7 @@ export default function ScannerClient() {
         setDocType('ine');
         setDocNumber('');
         setPhoto(null);
+        setPhotoBack(null);
         setDone(null);
       } catch {
         setError('Error de red.');
@@ -222,7 +228,12 @@ export default function ScannerClient() {
       fd.set('nationality', nationality.trim());
       fd.set('id_doc_type', docType);
       fd.set('id_doc_number', docNumber.trim());
-      if (photo) fd.set('photo', photo);
+      // Compresión en el cliente (1200px WebP): dos fotos de cámara sin
+      // comprimir rebasan el límite de payload de las functions.
+      if (photo) fd.set('photo', await preparePhotoFile(photo, 'id-frente'));
+      if (photoBack && HAS_BACK_SIDE.has(docType)) {
+        fd.set('photo_back', await preparePhotoFile(photoBack, 'id-reverso'));
+      }
       const res = await fetch('/api/admin/checkin', { method: 'POST', body: fd });
       const data = await res.json();
       if (!res.ok) {
@@ -331,7 +342,17 @@ export default function ScannerClient() {
             <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: 16, textAlign: 'center' }}>
               <p style={{ color: '#166534', fontWeight: 600, margin: '0 0 12px' }}>✓ Check-in registrado: {done}</p>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-                <button onClick={() => setDone(null)} style={{ ...btn, background: GOLD, color: '#fff' }}>+ Otro huésped</button>
+                <button
+                  onClick={() => {
+                    // Siguiente acompañante: limpiar identidad, conservar reserva.
+                    setDone(null);
+                    setFullName('');
+                    setDocNumber('');
+                    setPhoto(null);
+                    setPhotoBack(null);
+                  }}
+                  style={{ ...btn, background: GOLD, color: '#fff' }}
+                >+ Otro huésped</button>
                 <button onClick={reset} style={{ ...btn, background: '#eee', color: '#333' }}>Escanear otro</button>
               </div>
             </div>
@@ -371,10 +392,19 @@ export default function ScannerClient() {
                 </div>
               </div>
               <div>
-                <label style={{ fontSize: '0.82rem', color: '#6b6b6b' }}>Foto del documento (opcional)</label>
+                <label style={{ fontSize: '0.82rem', color: '#6b6b6b' }}>
+                  {HAS_BACK_SIDE.has(docType) ? 'Foto del FRENTE (opcional)' : 'Foto del documento (opcional)'}
+                </label>
                 <input type="file" accept="image/*" capture="environment" onChange={(e) => setPhoto(e.target.files?.[0] || null)} style={{ ...field, padding: 9 }} />
-                {photo && <p style={{ fontSize: '0.78rem', color: '#27ae60', margin: '4px 0 0' }}>✓ {photo.name}</p>}
+                {photo && <p style={{ fontSize: '0.78rem', color: '#27ae60', margin: '4px 0 0' }}>✓ Frente listo</p>}
               </div>
+              {HAS_BACK_SIDE.has(docType) && (
+                <div>
+                  <label style={{ fontSize: '0.82rem', color: '#6b6b6b' }}>Foto del REVERSO (opcional)</label>
+                  <input type="file" accept="image/*" capture="environment" onChange={(e) => setPhotoBack(e.target.files?.[0] || null)} style={{ ...field, padding: 9 }} />
+                  {photoBack && <p style={{ fontSize: '0.78rem', color: '#27ae60', margin: '4px 0 0' }}>✓ Reverso listo</p>}
+                </div>
+              )}
               {error && <p style={{ color: '#c0392b', fontSize: '0.9rem', margin: 0 }}>{error}</p>}
               <div style={{ display: 'flex', gap: 8 }}>
                 <button type="submit" disabled={saving} style={{ ...btn, background: GREEN, color: '#fff', flex: 1, opacity: saving ? 0.6 : 1 }}>
