@@ -869,6 +869,7 @@ export async function sendDirectorioNewReservationEmail(r: FullReservation, gues
     html: `
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto">
         <h3>Nueva reservación confirmada · vía Directorio Santiago</h3>
+        <p style="margin:0 0 10px;font-family:monospace;font-size:1.35rem;font-weight:700;color:#856d47">${r.folio}</p>
         <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;margin-bottom:14px">
           <p style="margin:0;color:#166534;font-size:0.9rem">✓ <strong>Pagada en línea en el Directorio.</strong> No cobrar hospedaje al huésped.</p>
         </div>
