@@ -9,7 +9,31 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const BUCKET = 'guest-ids';
 
-const DOC_TYPES = new Set(['ine', 'pasaporte', 'licencia', 'otro']);
+const DOC_TYPES = new Set(['ine', 'pasaporte', 'licencia', 'cedula', 'residente', 'otro']);
+
+const MIRROR_UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+/**
+ * Reserva nacida en el Directorio Santiago (source='directorio'): al hacerle
+ * check-in aquí, refleja la llegada en `lodging_reservations` (base compartida)
+ * para que el pase del huésped en la app muestre "Check-in hecho". Best-effort,
+ * no pisa un check-in previo hecho desde la app del anfitrión.
+ */
+async function propagateDirectorioCheckin(notes: string | null, at: string): Promise<void> {
+  const dirId = notes?.match(MIRROR_UUID_RE)?.[0];
+  if (!dirId) return;
+  try {
+    const rows = await supabaseGet<{ id: string; checked_in_at: string | null }>(
+      'lodging_reservations',
+      { id: `eq.${dirId}`, select: 'id,checked_in_at', limit: '1' }
+    );
+    if (rows[0] && !rows[0].checked_in_at) {
+      await supabasePatch('lodging_reservations', dirId, { checked_in_at: at });
+    }
+  } catch (err) {
+    console.error('[checkin] directorio propagate failed', err);
+  }
+}
 
 /**
  * POST /api/admin/checkin — registra el check-in de un huésped (multipart):
@@ -37,16 +61,30 @@ export async function POST(req: NextRequest) {
   const docType = String(form.get('id_doc_type') || '').trim().toLowerCase();
   const docNumber = String(form.get('id_doc_number') || '').trim().toUpperCase();
   const photo = form.get('photo');
+  // Hora real de entrada opcional (el modal del detalle la deja ajustar).
+  const checkinAtRaw = String(form.get('checkin_at') || '').trim();
+  const checkinAt =
+    checkinAtRaw && !Number.isNaN(Date.parse(checkinAtRaw))
+      ? new Date(checkinAtRaw).toISOString()
+      : new Date().toISOString();
 
   if (!reservationId || !fullName || !DOC_TYPES.has(docType)) {
     return NextResponse.json({ error: 'Faltan datos (nombre, tipo de documento).' }, { status: 400 });
   }
 
   // La reserva debe existir (y no estar cancelada).
-  const rows = await supabaseGet<{ id: string; folio: string; status: string; checkin_at: string | null }>(
-    'reservations',
-    { id: `eq.${reservationId}`, select: 'id,folio,status,checkin_at', limit: '1' }
-  );
+  const rows = await supabaseGet<{
+    id: string;
+    folio: string;
+    status: string;
+    checkin_at: string | null;
+    source: string | null;
+    notes: string | null;
+  }>('reservations', {
+    id: `eq.${reservationId}`,
+    select: 'id,folio,status,checkin_at,source,notes',
+    limit: '1',
+  });
   const reservation = rows[0];
   if (!reservation) return NextResponse.json({ error: 'Reservación no encontrada.' }, { status: 404 });
   if (reservation.status === 'cancelled' || reservation.status === 'no_show') {
@@ -95,6 +133,7 @@ export async function POST(req: NextRequest) {
       id_doc_type: docType,
       id_doc_number: docNumber || null,
       id_doc_photo_path: photoPath,
+      checked_in_at: checkinAt,
     });
   } catch (err) {
     return NextResponse.json({ error: `No se pudo guardar el registro: ${String(err).slice(0, 120)}` }, { status: 500 });
@@ -110,8 +149,12 @@ export async function POST(req: NextRequest) {
   };
   if (nationality) patch.nationality = nationality;
   if (/^\d{4}-\d{2}-\d{2}$/.test(dob)) patch.date_of_birth = dob;
-  if (!reservation.checkin_at) patch.checkin_at = new Date().toISOString();
+  if (!reservation.checkin_at) patch.checkin_at = checkinAt;
   await supabasePatch('reservations', reservationId, patch);
+
+  if (reservation.source === 'directorio') {
+    await propagateDirectorioCheckin(reservation.notes, checkinAt);
+  }
 
   logAuditEvent({
     event: 'reservation.checkin',

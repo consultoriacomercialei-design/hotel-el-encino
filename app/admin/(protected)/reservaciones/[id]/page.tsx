@@ -99,6 +99,16 @@ function fmt(n: number) {
   return n.toLocaleString('es-MX');
 }
 
+interface GuestCheckinRow {
+  id: string;
+  full_name: string;
+  nationality: string | null;
+  id_doc_type: string | null;
+  id_doc_number: string | null;
+  id_doc_photo_path: string | null;
+  checked_in_at: string | null;
+}
+
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString('es-MX', {
     year: 'numeric', month: 'long', day: 'numeric',
@@ -127,7 +137,7 @@ export default async function ReservationDetailPage({
   const r = rows[0];
   if (!r) notFound();
 
-  const [invoices, blacklistEntry, emailLog, fiscal] = await Promise.all([
+  const [invoices, blacklistEntry, emailLog, fiscal, checkins] = await Promise.all([
     getInvoicesForReservation(r.id),
     getBlacklistEntry(r.guest_email),
     supabaseGet<EmailLogEntry>('email_log', {
@@ -136,6 +146,11 @@ export default async function ReservationDetailPage({
       order: 'sent_at.desc',
     }),
     fetchFiscalConfig(),
+    supabaseGet<GuestCheckinRow>('guest_checkins', {
+      reservation_id: `eq.${r.id}`,
+      select: 'id,full_name,nationality,id_doc_type,id_doc_number,id_doc_photo_path,checked_in_at',
+      order: 'checked_in_at.asc',
+    }).catch(() => [] as GuestCheckinRow[]),
   ]);
 
   const s = STATUS_LABELS[r.status] || { label: r.status, bg: '#f5f5f5', color: '#555' };
@@ -327,6 +342,35 @@ export default async function ReservationDetailPage({
                 ? 'Sin registro de entrada (reservación no activa).'
                 : 'Sin datos de identificación registrados.'}
             </p>
+          )}
+
+          {checkins.length > 0 && (
+            <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #f0ece5' }}>
+              <div style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: '#999', marginBottom: '8px' }}>
+                Huéspedes registrados ({checkins.length})
+              </div>
+              {checkins.map(c => (
+                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', borderBottom: '1px solid #f7f4ef', fontSize: '0.83rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 600, color: '#1a1a1a' }}>{c.full_name}</span>
+                  <span style={{ color: '#6b6b6b' }}>
+                    {(c.id_doc_type || '').toUpperCase()}{c.id_doc_number ? ` · ${c.id_doc_number}` : ''}
+                  </span>
+                  {c.checked_in_at && (
+                    <span style={{ color: '#999', fontSize: '0.75rem' }}>{formatDateTime(c.checked_in_at)}</span>
+                  )}
+                  {c.id_doc_photo_path && (
+                    <a
+                      href={`/api/admin/checkin/photo?path=${encodeURIComponent(c.id_doc_photo_path)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ marginLeft: 'auto', color: '#856d47', fontWeight: 700, fontSize: '0.78rem', textDecoration: 'none' }}
+                    >
+                      📷 Ver identificación
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </div>
 

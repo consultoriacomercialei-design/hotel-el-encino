@@ -5,6 +5,11 @@
 
 import { logEmailSent } from './supabase';
 import { parseAnticipoFromNotes } from './balance';
+// El pase con QR debe existir para TODA reserva confirmada, no solo las pagadas
+// por Mercado Pago (confirmaciones manuales, efectivo, lote). Se garantiza en
+// los correos de confirmación —el cuello por donde pasan todos los flujos— y no
+// en cada sitio. Best-effort: sin código, el correo sale sin botón de Wallet.
+import { ensureCheckinCode } from '@/app/lib/wallet/checkin-code';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 // .trim(): las envs de Vercel a veces llegan con \n colado al final.
@@ -163,6 +168,7 @@ export async function sendConfirmedEmails(
   const icsContent = generateICS(payload, reservationId, folio);
   const icsBase64 = Buffer.from(icsContent).toString('base64');
   const icsAttachment = { filename: `reservacion-${folio}.ics`, content: icsBase64 };
+  const checkinCode = (await ensureCheckinCode(reservationId)) ?? undefined;
 
   const anticipo  = parseAnticipo(payload.notes);
   const saldo     = anticipo ? Math.max(0, payload.total_mxn - anticipo) : payload.total_mxn;
@@ -199,6 +205,7 @@ export async function sendConfirmedEmails(
             ${notesForGuest ? `<p style="margin:8px 0 0;color:#6b6b6b;font-size:0.85rem"><em>${notesForGuest}</em></p>` : ''}
           </div>
           ${paymentBlock}
+          ${walletButtonHtml(checkinCode)}
           <p style="color:#6b6b6b;font-size:0.85rem">📍 Hermenegildo Galeana 200, Santiago, N.L. · 📞 +52 (81) 2381 6588</p>
           <a href="https://wa.me/528123816588" style="display:inline-block;margin-top:12px;padding:10px 22px;background:#25D366;color:#fff;text-decoration:none;border-radius:980px;font-size:0.85rem">Contactar por WhatsApp</a>
         </div>
@@ -225,7 +232,7 @@ export async function sendConfirmedEmails(
           ${payload.notes ? `<p><strong>Notas:</strong> ${payload.notes}</p>` : ''}
           <hr />
           <p style="font-size:0.85rem;color:#856d47"><strong>${anticipo ? `Anticipo $${anticipo.toLocaleString('es-MX')} recibido. Cobrar $${saldo.toLocaleString('es-MX')} al check-in.` : 'El huésped pagará el total al llegar.'}</strong></p>
-          <p style="font-size:0.8rem;color:#6b6b6b">Adjunto: .ics para abrir en calendario. O suscribe al feed: <a href="https://hotelelencino.com/api/calendar">hotelelencino.com/api/calendar</a></p>
+          <p style="font-size:0.8rem;color:#6b6b6b">Adjunto: .ics para abrir en calendario.</p>
         </div>
       `,
       attachments: [icsAttachment],
@@ -558,6 +565,8 @@ export async function sendCancelledMpIncompleteEmail(payload: ReservationPayload
 
 export async function sendPaymentConfirmedEmails(reservation: FullReservation) {
   const room = ROOM_LABELS[reservation.room_type] || reservation.room_type;
+  const checkinCode =
+    reservation.checkin_code ?? (await ensureCheckinCode(reservation.id)) ?? undefined;
   const icsContent = generateICS(reservation, reservation.id, reservation.folio);
   const icsBase64 = Buffer.from(icsContent).toString('base64');
   const icsAttachment = { filename: `reservacion-${reservation.folio}.ics`, content: icsBase64 };
@@ -579,7 +588,7 @@ export async function sendPaymentConfirmedEmails(reservation: FullReservation) {
             ${guestRowsHtml(reservation)}
             <p style="margin:0"><strong>Total pagado:</strong> $${reservation.total_mxn.toLocaleString('es-MX')} MXN</p>
           </div>
-          ${walletButtonHtml(reservation.checkin_code)}
+          ${walletButtonHtml(checkinCode)}
           <p style="color:#6b6b6b;font-size:0.85rem">📍 Hermenegildo Galeana 200, Santiago, N.L. · 📞 +52 (81) 2381 6588</p>
           <a href="https://wa.me/528123816588" style="display:inline-block;margin-top:12px;padding:10px 22px;background:#25D366;color:#fff;text-decoration:none;border-radius:980px;font-size:0.85rem">Contactar por WhatsApp</a>
         </div>
@@ -879,7 +888,7 @@ export async function sendDirectorioNewReservationEmail(r: FullReservation, gues
         ${guestRowsText(r)}
         <p><strong>Total pagado:</strong> $${r.total_mxn.toLocaleString('es-MX')} MXN</p>
         <hr />
-        <p style="font-size:0.8rem;color:#6b6b6b">Adjunto: .ics para abrir en calendario. O suscribe al feed: <a href="https://hotelelencino.com/api/calendar">hotelelencino.com/api/calendar</a></p>
+        <p style="font-size:0.8rem;color:#6b6b6b">Adjunto: .ics para abrir en calendario.</p>
       </div>
     `,
     attachments: [{ filename: `reservacion-${r.folio}.ics`, content: icsBase64 }],

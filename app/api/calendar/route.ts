@@ -2,14 +2,17 @@
  * GET /api/calendar
  * Returns a live iCal (.ics) feed of all confirmed/pending reservations.
  *
+ * ⚠️ Expone datos personales de huéspedes — REQUIERE token.
+ *
  * How to use:
+ * - URL: https://hotelelencino.com/api/calendar?token=<CALENDAR_FEED_TOKEN>
  * - iPhone: Calendar app → Add Account → Other → Add Subscribed Calendar → paste URL
  * - Google Calendar: Settings → Other calendars → Add by URL → paste URL
- * - URL: https://hotelelencino.com/api/calendar
  *
  * Without Supabase: returns an empty calendar (no errors).
  */
 
+import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { limiters, getClientIP, tooManyRequests } from '@/app/lib/rate-limit';
 
@@ -70,10 +73,36 @@ async function fetchReservations(): Promise<Reservation[]> {
   return res.json();
 }
 
+/**
+ * El feed expone datos personales de huéspedes (nombre, teléfono, correo).
+ * Exige token y FALLA CERRADO: si `CALENDAR_FEED_TOKEN` no está configurada,
+ * nadie pasa. Comparación en tiempo constante para no filtrar el token.
+ */
+function tokenOk(req: NextRequest): boolean {
+  const expected = process.env.CALENDAR_FEED_TOKEN;
+  if (!expected) return false;
+
+  const supplied =
+    req.nextUrl.searchParams.get('token') ??
+    req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ??
+    '';
+
+  const a = Buffer.from(supplied);
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
 export async function GET(req: NextRequest) {
   // Rate limit: 20 por hora por IP (feed de calendario)
   if (!limiters.calendar(getClientIP(req))) {
     return tooManyRequests();
+  }
+
+  if (!tokenOk(req)) {
+    return new NextResponse('Unauthorized', {
+      status: 401,
+      headers: { 'Cache-Control': 'no-store' },
+    });
   }
 
   const reservations = await fetchReservations();

@@ -8,16 +8,21 @@
  */
 
 import { useState, useTransition } from 'react';
-import { registerCheckinAction } from '../../actions';
 
 const ID_TYPES = [
-  { value: 'INE',       label: 'INE / IFE (México)' },
-  { value: 'Pasaporte', label: 'Pasaporte' },
-  { value: 'Licencia',  label: 'Licencia de conducir' },
-  { value: 'Cédula',    label: 'Cédula profesional' },
-  { value: 'Residente', label: 'Tarjeta de residente' },
-  { value: 'Otro',      label: 'Otro documento' },
+  { value: 'ine',       label: 'INE / IFE (México)' },
+  { value: 'pasaporte', label: 'Pasaporte' },
+  { value: 'licencia',  label: 'Licencia de conducir' },
+  { value: 'cedula',    label: 'Cédula profesional' },
+  { value: 'residente', label: 'Tarjeta de residente' },
+  { value: 'otro',      label: 'Otro documento' },
 ];
+
+/** Normaliza valores previos ('INE', 'Cédula'…) al slug del selector. */
+function normalizeIdType(v?: string): string {
+  const slug = (v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return ID_TYPES.some(t => t.value === slug) ? slug : 'ine';
+}
 
 interface Props {
   reservationId: string;
@@ -50,9 +55,10 @@ export default function CheckinModal({
 }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
+  const [photo, setPhoto] = useState<File | null>(null);
 
   const [form, setForm] = useState({
-    id_type:       currentIdType    || 'INE',
+    id_type:       normalizeIdType(currentIdType),
     id_number:     currentIdNumber  || '',
     nationality:   currentNationality || 'Mexicana',
     date_of_birth: '',
@@ -65,21 +71,31 @@ export default function CheckinModal({
     e.preventDefault();
     if (!form.id_number.trim()) { setError('El número de documento es requerido.'); return; }
     if (!form.nationality.trim()) { setError('La nacionalidad es requerida.'); return; }
+    if (photo && photo.size > 8 * 1024 * 1024) { setError('La foto excede 8 MB.'); return; }
     setError('');
 
     startTransition(async () => {
-      const checkinAt = new Date(`${todayIso()}T${form.checkin_time}:00`).toISOString();
-      const result = await registerCheckinAction(reservationId, {
-        id_type:       form.id_type,
-        id_number:     form.id_number,
-        nationality:   form.nationality,
-        date_of_birth: form.date_of_birth || undefined,
-        checkin_at:    checkinAt,
-      });
-      if (result.ok) {
-        onSuccess();
-      } else {
-        setError(result.error ?? 'Error al registrar la entrada');
+      // Mismo endpoint que el escáner de check-in: un solo camino de registro
+      // (guest_checkins + espejo en la reserva + foto al bucket privado).
+      const fd = new FormData();
+      fd.set('reservation_id', reservationId);
+      fd.set('full_name', guestName);
+      fd.set('id_doc_type', form.id_type);
+      fd.set('id_doc_number', form.id_number);
+      fd.set('nationality', form.nationality);
+      if (form.date_of_birth) fd.set('date_of_birth', form.date_of_birth);
+      fd.set('checkin_at', new Date(`${todayIso()}T${form.checkin_time}:00`).toISOString());
+      if (photo) fd.set('photo', photo);
+      try {
+        const res = await fetch('/api/admin/checkin', { method: 'POST', body: fd });
+        const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+        if (res.ok && data.ok) {
+          onSuccess();
+        } else {
+          setError(data.error ?? 'Error al registrar la entrada');
+        }
+      } catch {
+        setError('Error de conexión. Intenta de nuevo.');
       }
     });
   };
@@ -173,6 +189,23 @@ export default function CheckinModal({
                 />
               </div>
             </div>
+          </div>
+
+          {/* Foto del documento (opcional) */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={labelStyle}>Foto del documento <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(opcional)</span></label>
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={e => setPhoto(e.target.files?.[0] ?? null)}
+              style={{ ...inputStyle, padding: '8px 10px' }}
+            />
+            {photo && (
+              <div style={{ fontSize: '0.72rem', color: '#6b6b6b', marginTop: '4px' }}>
+                {photo.name} · {(photo.size / 1024 / 1024).toFixed(1)} MB
+              </div>
+            )}
           </div>
 
           {/* Hora de entrada */}
