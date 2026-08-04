@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { href: '/admin/hospedajes',     label: 'Hospedajes'     },
   { href: '/admin/calendario',     label: 'Calendario'     },
   { href: '/admin/analytics',      label: 'Analytics'      },
+  { href: '/admin/solicitudes',    label: 'Solicitudes'    },
   { href: '/admin/configuracion',  label: 'Configuración'  },
   { href: '/admin/nueva',          label: '+ Nueva'        },
 ];
