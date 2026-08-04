@@ -64,6 +64,45 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // Alerta del vigía externo (GitHub Actions): correo a gerencia@ con DEDUP
+  // server-side — la misma alerta no se repite en 6 horas aunque el vigía
+  // la reporte cada 10 min.
+  if (typeof (body as { alerta?: string }).alerta === 'string' && (body as { alerta: string }).alerta.length > 0) {
+    const alerta = (body as { alerta: string }).alerta.slice(0, 2000);
+    const rows = await supabaseGet<{ key: string; value: { hash?: string; at?: string } }>(
+      'hotel_settings', { select: 'key,value', key: 'eq.velador_alert_state', limit: '1' }
+    );
+    const prev = rows?.[0]?.value;
+    const hash = alerta.replace(/\d/g, '#'); // misma alerta con números distintos = misma
+    const sixHours = 6 * 60 * 60 * 1000;
+    if (prev?.hash === hash && prev?.at && Date.now() - new Date(prev.at).getTime() < sixHours) {
+      return NextResponse.json({ ok: true, dedup: true });
+    }
+    await fetch(`${(process.env.SUPABASE_URL ?? '').replace(/\s/g, '')}/rest/v1/hotel_settings`, {
+      method: 'POST',
+      headers: {
+        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates',
+      },
+      body: JSON.stringify({ key: 'velador_alert_state', value: { hash, at: new Date().toISOString() } }),
+    }).catch(() => {});
+    const key = process.env.RESEND_API_KEY;
+    if (key) {
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: FROM, to: [ADMIN_EMAIL],
+          subject: '🚨 El Velador: algo está CAÍDO',
+          text: alerta,
+        }),
+      }).catch(() => {});
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   if (typeof body.reporte === 'string' && body.reporte.length > 0) {
     const key = process.env.RESEND_API_KEY;
     if (key) {
