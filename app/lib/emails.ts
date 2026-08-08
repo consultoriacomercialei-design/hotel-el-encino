@@ -17,6 +17,21 @@ const HOTEL_EMAIL = (process.env.HOTEL_EMAIL || 'elencino_22@hotmail.com').trim(
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'consultoriacomercialei@gmail.com').trim();
 const FROM = 'Hotel El Encino <reservaciones@hotelelencino.com>';
 
+/**
+ * Destinatarios de TODO aviso interno (nueva reservación, cancelación, etc.).
+ * gerencia@ (HOTEL_EMAIL) recibe pero Apple Mail no empuja notificación; por eso
+ * se incluyen SIEMPRE los correos personales del dueño y su hermano, que sí
+ * avisan al instante en el celular (decisión 08-ago-2026). Dedup por si
+ * HOTEL_EMAIL/ADMIN_EMAIL ya coinciden con alguno.
+ */
+const NOTIFY_RECIPIENTS = Array.from(
+  new Set(
+    [HOTEL_EMAIL, ADMIN_EMAIL, 'elencino_22@hotmail.com', 'consultoriacomercialei@gmail.com']
+      .map((e) => e.trim())
+      .filter(Boolean)
+  )
+);
+
 export interface ReservationPayload {
   guest_name: string;
   guest_email: string;
@@ -213,7 +228,7 @@ export async function sendConfirmedEmails(
     }),
     // Hotel + Admin
     sendEmail({
-      from: FROM, to: [HOTEL_EMAIL, ADMIN_EMAIL],
+      from: FROM, to: NOTIFY_RECIPIENTS,
       subject: `🏨 Nueva reservación — ${payload.guest_name} · ${formatDate(payload.check_in)}`,
       html: `
         <div style="font-family:sans-serif;max-width:560px;margin:0 auto">
@@ -287,7 +302,7 @@ export async function sendPendingCashEmails(
     }),
     // Hotel + Admin: alerta clara de que ES PENDIENTE, no confirmada
     sendEmail({
-      from: FROM, to: [HOTEL_EMAIL, ADMIN_EMAIL],
+      from: FROM, to: NOTIFY_RECIPIENTS,
       subject: `🔔 NUEVA SOLICITUD — ${payload.guest_name} · ${formatDate(payload.check_in)} · efectivo/WhatsApp`,
       html: `
         <div style="font-family:sans-serif;max-width:560px;margin:0 auto">
@@ -335,7 +350,7 @@ export async function sendWaitlistEmails(
   await Promise.all([
     // Admin: alerta de sobrecupo
     sendEmail({
-      from: FROM, to: [HOTEL_EMAIL, ADMIN_EMAIL],
+      from: FROM, to: NOTIFY_RECIPIENTS,
       subject: `⚠ SOBRECUPO — ${payload.guest_name} · ${formatDate(payload.check_in)} → ${formatDate(payload.check_out)} · ${folio}`,
       html: `
         <div style="font-family:sans-serif;max-width:560px;margin:0 auto">
@@ -418,7 +433,7 @@ export async function sendPendingPaymentEmails(
       `,
     }),
     sendEmail({
-      from: FROM, to: [HOTEL_EMAIL, ADMIN_EMAIL],
+      from: FROM, to: NOTIFY_RECIPIENTS,
       subject: `💳 Pago en proceso — ${payload.guest_name} · ${folio}`,
       html: `
         <div style="font-family:sans-serif;max-width:560px;margin:0 auto">
@@ -596,7 +611,7 @@ export async function sendPaymentConfirmedEmails(reservation: FullReservation) {
       attachments: [icsAttachment],
     }),
     sendEmail({
-      from: FROM, to: [HOTEL_EMAIL, ADMIN_EMAIL],
+      from: FROM, to: NOTIFY_RECIPIENTS,
       subject: `✅ PAGO CONFIRMADO — ${reservation.guest_name} · ${reservation.folio}`,
       html: `
         <div style="font-family:sans-serif;max-width:560px;margin:0 auto">
@@ -685,7 +700,7 @@ export async function sendReminderEmails(reservation: {
     // Admin: alerta con datos de contacto directo
     sendEmail({
       from: FROM,
-      to: [HOTEL_EMAIL, ADMIN_EMAIL],
+      to: NOTIFY_RECIPIENTS,
       subject: `⏰ ${reservation.folio} lleva 90 min sin confirmar — ${reservation.guest_name}`,
       html: `
         <div style="font-family:sans-serif;max-width:560px;margin:0 auto">
@@ -864,7 +879,7 @@ export async function sendDirectorioNewReservationEmail(r: FullReservation, gues
     ? guestNotes.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     : '';
   const result = await sendEmail({
-    from: FROM, to: [HOTEL_EMAIL, ADMIN_EMAIL],
+    from: FROM, to: NOTIFY_RECIPIENTS,
     subject: `🏨 Nueva reservación (Directorio) — ${r.guest_name} · ${formatDate(r.check_in)}`,
     html: `
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto">
@@ -907,7 +922,7 @@ export async function sendDirectorioNewReservationEmail(r: FullReservation, gues
 export async function sendDirectorioCancelledEmail(r: FullReservation) {
   const room = ROOM_LABELS[r.room_type] || r.room_type;
   const result = await sendEmail({
-    from: FROM, to: [HOTEL_EMAIL, ADMIN_EMAIL],
+    from: FROM, to: NOTIFY_RECIPIENTS,
     subject: `❌ Reservación del Directorio cancelada — ${r.guest_name} · ${formatDate(r.check_in)}`,
     html: `
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto">
