@@ -31,12 +31,19 @@ interface ReservationProps {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
+interface LastPayment { status: string; detail?: string | null }
+
 export default function ConfirmadaClient({ reservation: initial }: { reservation: ReservationProps }) {
-  const [status,   setStatus]   = useState(initial.status);
-  const [polling,  setPolling]  = useState(initial.status === 'pending_payment');
+  const [status,      setStatus]      = useState(initial.status);
+  const [polling,     setPolling]     = useState(initial.status === 'pending_payment');
+  const [lastPayment, setLastPayment] = useState<LastPayment | null>(null);
+  const [retryUrl,    setRetryUrl]    = useState<string | null>(null);
   const isConfirmed = status === 'confirmed';
   const isPendingMp = status === 'pending_payment';
   const isCash      = initial.paymentMethod !== 'online';
+  // El último intento fue rechazado y la reserva sigue apartada → decir la
+  // verdad y ofrecer reintentar, en vez de girar en silencio.
+  const isRejected  = isPendingMp && (lastPayment?.status === 'rejected' || lastPayment?.status === 'cancelled');
 
   // Fire conversion + enhanced data exactly once when status reaches 'confirmed'
   const conversionFiredRef = useRef(false);
@@ -76,7 +83,9 @@ export default function ConfirmadaClient({ reservation: initial }: { reservation
   const checkStatus = useCallback(async () => {
     try {
       const res  = await fetch(`/api/payment/status/${initial.id}`, { cache: 'no-store' });
-      const data = await res.json() as { status?: string };
+      const data = await res.json() as { status?: string; last_payment?: LastPayment | null; retry_url?: string | null };
+      setLastPayment(data.last_payment ?? null);
+      setRetryUrl(data.retry_url ?? null);
       if (data.status && data.status !== 'pending_payment') {
         setStatus(data.status);
         setPolling(false);
@@ -119,8 +128,8 @@ export default function ConfirmadaClient({ reservation: initial }: { reservation
 
         {/* ── Status hero ──────────────────────────────────────────────── */}
         <div style={{ textAlign: 'center', marginBottom: '36px' }}>
-          {isPendingMp && !polling ? (
-            /* Payment timed out */
+          {isPendingMp && (isRejected || !polling) ? (
+            /* Rejected attempt or payment timed out */
             <StatusIcon type="warning" />
           ) : isPendingMp ? (
             /* Waiting for MP webhook */
@@ -132,25 +141,29 @@ export default function ConfirmadaClient({ reservation: initial }: { reservation
           )}
 
           <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 600, fontSize: 'clamp(1.55rem, 5vw, 2rem)', color: '#1a1a1a', margin: '20px 0 8px', lineHeight: 1.2 }}>
-            {isPendingMp && polling
-              ? 'Procesando tu pago…'
-              : isConfirmed
-                ? isCash
-                  ? 'Solicitud recibida'
-                  : '¡Pago confirmado!'
-                : status === 'cancelled'
-                  ? 'Reservación cancelada'
-                  : 'Solicitud recibida'}
+            {isRejected
+              ? 'Tu pago no se completó'
+              : isPendingMp && polling
+                ? 'Procesando tu pago…'
+                : isConfirmed
+                  ? isCash
+                    ? 'Solicitud recibida'
+                    : '¡Pago confirmado!'
+                  : status === 'cancelled'
+                    ? 'Reservación cancelada'
+                    : 'Solicitud recibida'}
           </h1>
 
           <p style={{ color: '#6b6b6b', fontSize: '0.9rem', lineHeight: 1.6, maxWidth: '380px', margin: '0 auto' }}>
-            {isPendingMp && polling
-              ? 'Estamos confirmando tu pago con Mercado Pago. Esto toma unos segundos.'
-              : isConfirmed && !isCash
-                ? 'Tu reservación está confirmada. Recibirás los detalles completos en tu correo electrónico.'
-                : isCash
-                  ? 'Enviamos la confirmación a tu correo. El hotel te contactará para confirmar por WhatsApp en las próximas 2 horas.'
-                  : ''}
+            {isRejected
+              ? 'El banco no aceptó el intento. Tu lugar sigue apartado — puedes intentar de nuevo con la misma u otra tarjeta.'
+              : isPendingMp && polling
+                ? 'Estamos confirmando tu pago con Mercado Pago. Esto toma unos segundos.'
+                : isConfirmed && !isCash
+                  ? 'Tu reservación está confirmada. Recibirás los detalles completos en tu correo electrónico.'
+                  : isCash
+                    ? 'Enviamos la confirmación a tu correo. El hotel te contactará para confirmar por WhatsApp en las próximas 2 horas.'
+                    : ''}
           </p>
         </div>
 
@@ -242,8 +255,35 @@ export default function ConfirmadaClient({ reservation: initial }: { reservation
           </div>
         )}
 
+        {/* ── Rejected attempt: honest state + retry CTA ───────────────── */}
+        {isRejected && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
+            {retryUrl && (
+              <a
+                href={retryUrl}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                  padding: '15px 24px', borderRadius: '980px',
+                  background: '#009ee3', color: '#fff',
+                  fontWeight: 600, fontSize: '0.9rem',
+                  textDecoration: 'none',
+                  boxShadow: '0 6px 20px rgba(0,158,227,0.32)',
+                  letterSpacing: '0.02em',
+                }}
+              >
+                Reintentar pago
+              </a>
+            )}
+            {polling && (
+              <p style={{ textAlign: 'center', color: '#9b9b9b', fontSize: '0.78rem', margin: 0 }}>
+                Si completas el pago, esta página se actualizará sola.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* ── MP polling state CTAs ────────────────────────────────────── */}
-        {isPendingMp && polling && (
+        {isPendingMp && polling && !isRejected && (
           <div style={{ textAlign: 'center', marginTop: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#856d47', fontSize: '0.85rem' }}>
               <SpinnerIcon />

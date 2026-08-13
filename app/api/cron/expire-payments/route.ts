@@ -14,6 +14,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendCancelledMpIncompleteEmail, type ReservationPayload } from '@/app/lib/emails';
 import { findAndDeleteCalendarEventsByFolio } from '@/app/lib/google-calendar';
+import { supabaseGet } from '@/app/lib/supabase';
+import { deriveReservationState } from '@/app/lib/payments';
 
 const SUPABASE_URL = process.env.SUPABASE_URL!;
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -64,16 +66,42 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'DB error' }, { status: 500 });
   }
 
-  const stale: StaleReservation[] = await getRes.json();
+  const staleAll: StaleReservation[] = await getRes.json();
 
-  if (!stale.length) {
+  if (!staleAll.length) {
     console.log('[CRON/EXPIRE] No stale pending_payment reservations found');
-    return NextResponse.json({ cancelled: 0, records: [] });
+    return NextResponse.json({ cancelled: 0, rescued: 0, records: [] });
   }
 
-  // 2. PATCH all stale → cancelled (idempotent, only matches still pending_payment)
+  // 2. Regla del sistema: pago aprobado ⇒ reserva confirmada. Una pendiente
+  //    vencida CON pago aprobado registrado (webhook perdido/caído) se
+  //    RESCATA — se confirma con calendario y correo — en vez de cancelarse.
+  const staleIds = staleAll.map(r => r.id);
+  const approvedRows = await supabaseGet<{ reservation_id: string }>('payments', {
+    reservation_id: `in.(${staleIds.join(',')})`,
+    status: 'eq.approved',
+    select: 'reservation_id',
+  });
+  const rescueIds = new Set(approvedRows.map(p => p.reservation_id));
+
+  const rescued: { id: string; folio: string }[] = [];
+  for (const r of staleAll.filter(x => rescueIds.has(x.id))) {
+    const result = await deriveReservationState(r.id);
+    console.log(`[CRON/EXPIRE] ${r.folio} tenía pago aprobado → rescate: ${result}`);
+    if (result === 'confirmed' || result === 'already_confirmed') rescued.push({ id: r.id, folio: r.folio });
+  }
+
+  const stale = staleAll.filter(r => !rescueIds.has(r.id));
+
+  if (!stale.length) {
+    return NextResponse.json({ cancelled: 0, rescued: rescued.length, records: [] });
+  }
+
+  // 3. PATCH restantes → cancelled (solo ids verificados SIN pago aprobado;
+  //    el filtro por status+created_at mantiene la idempotencia)
+  const cancelIdList = stale.map(r => r.id).join(',');
   const patchRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/reservations?status=eq.pending_payment&created_at=lt.${cutoff}`,
+    `${SUPABASE_URL}/rest/v1/reservations?id=in.(${cancelIdList})&status=eq.pending_payment&created_at=lt.${cutoff}`,
     {
       method: 'PATCH',
       headers: {
@@ -126,5 +154,5 @@ export async function GET(req: NextRequest) {
   const cancelled = stale.map(r => ({ id: r.id, folio: r.folio, guest: r.guest_name }));
   console.log(`[CRON/EXPIRE] Cancelled ${cancelled.length} stale reservations:`, cancelled.map(r => r.folio).join(', '));
 
-  return NextResponse.json({ cancelled: cancelled.length, records: cancelled });
+  return NextResponse.json({ cancelled: cancelled.length, rescued: rescued.length, records: cancelled });
 }

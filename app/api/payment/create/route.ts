@@ -152,7 +152,9 @@ export async function POST(req: NextRequest) {
     const mpData = await mpRes.json();
     const { init_point, id: preference_id } = mpData;
 
-    await supabasePatch('reservations', reservation_id, { preference_id });
+    // init_point se persiste para que la página de estado ofrezca reintentar
+    // el pago (mismo checkout) si un intento es rechazado.
+    await supabasePatch('reservations', reservation_id, { preference_id, init_point });
     await sendPendingPaymentEmails(body, folio, init_point, reservation_id);
 
     console.log(`[PAYMENT/CREATE] ${folio} — preference ${preference_id}`);
