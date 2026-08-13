@@ -48,7 +48,7 @@ export async function fetchGoogleReviews(minRating = 4): Promise<PlaceSummary | 
 
     const res = await fetch(url, {
       headers: { 'X-Goog-FieldMask': 'displayName,rating,userRatingCount,reviews' },
-      next: { revalidate: 604800 }, // cache 1 semana en Vercel data cache
+      next: { revalidate: 86400 }, // cache 1 día en Vercel data cache (reseñas frescas para portada y /resenas)
     });
 
     if (!res.ok) {
