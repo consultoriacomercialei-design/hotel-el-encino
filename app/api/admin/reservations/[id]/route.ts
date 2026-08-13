@@ -12,6 +12,7 @@ import { limiters, getClientIP, tooManyRequests } from '@/app/lib/rate-limit';
 import { createCalendarEvent, type CalendarPayload } from '@/app/lib/google-calendar';
 import { sendConfirmedEmails, sendPaymentConfirmedEmails, type FullReservation, type LineItem } from '@/app/lib/emails';
 import { propagateDirectorioCancel } from '@/app/lib/directorio-cancel';
+import { registerManualPayment } from '@/app/lib/payments';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -103,6 +104,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       payment_method: 'cash',
       paid_at: new Date().toISOString(),
     });
+    // Registra el pago manual en `payments` + correo interno ✅ PAGO CONFIRMADO
+    await registerManualPayment(id);
     return NextResponse.json({ ok: true, status: 'confirmed' });
   }
 

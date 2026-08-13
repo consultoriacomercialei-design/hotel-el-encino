@@ -17,6 +17,7 @@ import {
   type ReservationPayload, type FullReservation, type LineItem,
 } from '@/app/lib/emails';
 import { propagateDirectorioCancel } from '@/app/lib/directorio-cancel';
+import { registerManualPayment } from '@/app/lib/payments';
 
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
 
@@ -162,6 +163,8 @@ export async function patchReservationAction(id: string, action: string) {
     await supabasePatch('reservations', id, {
       status: 'confirmed', payment_method: 'cash', paid_at: new Date().toISOString(),
     });
+    // Registra el pago manual en `payments` + correo interno ✅ PAGO CONFIRMADO
+    await registerManualPayment(id);
     return { ok: true, status: 'confirmed' };
   }
 

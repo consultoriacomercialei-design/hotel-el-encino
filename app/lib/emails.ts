@@ -641,6 +641,38 @@ export async function sendPaymentConfirmedEmails(reservation: FullReservation) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// MANUAL PAYMENT — pago por transferencia/efectivo marcado desde el admin.
+// Solo aviso interno: el huésped ya recibió su pase con el correo de
+// confirmación; este correo existe para que el dueño se entere del dinero.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function sendManualPaymentInternalEmail(reservation: FullReservation) {
+  const room = ROOM_LABELS[reservation.room_type] || reservation.room_type;
+  const methodLabel =
+    reservation.payment_method === 'transfer' ? 'Transferencia' :
+    reservation.payment_method === 'cash'     ? 'Efectivo / en recepción' :
+    reservation.payment_method ?? 'Manual';
+  await sendEmail({
+    from: FROM, to: NOTIFY_RECIPIENTS,
+    subject: `✅ PAGO CONFIRMADO — ${reservation.guest_name} · ${reservation.folio}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto">
+        <h3 style="color:#27ae60">✅ Pago recibido — registrado desde el admin</h3>
+        <p><strong>Folio:</strong> ${reservation.folio}</p>
+        <p><strong>Nombre:</strong> ${reservation.guest_name}</p>
+        <p><strong>Teléfono:</strong> ${reservation.guest_phone}</p>
+        <p><strong>Habitación:</strong> ${room}</p>
+        <p><strong>Llegada:</strong> ${formatDate(reservation.check_in)}</p>
+        <p><strong>Salida:</strong> ${formatDate(reservation.check_out)}</p>
+        <p><strong>Total cobrado:</strong> $${reservation.total_mxn.toLocaleString('es-MX')} MXN</p>
+        <p><strong>Método:</strong> ${methodLabel}</p>
+        ${reservation.notes ? `<p><strong>Notas:</strong> ${reservation.notes}</p>` : ''}
+      </div>
+    `,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // REMINDER — recordatorio 90 min: reserva pending sin confirmar
 // ─────────────────────────────────────────────────────────────────────────────
 

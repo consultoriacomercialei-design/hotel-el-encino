@@ -15,7 +15,7 @@
 
 import { supabaseGet, supabasePatch, logWebhookEvent, logAuditEvent } from '@/app/lib/supabase';
 import { createCalendarEvent, findAndDeleteCalendarEventsByFolio, type CalendarPayload } from '@/app/lib/google-calendar';
-import { sendPaymentConfirmedEmails, type FullReservation } from '@/app/lib/emails';
+import { sendPaymentConfirmedEmails, sendManualPaymentInternalEmail, type FullReservation } from '@/app/lib/emails';
 import { ensureCheckinCode } from '@/app/lib/wallet/checkin-code';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -163,6 +163,58 @@ async function runConfirmationSideEffects(reservationId: string, paymentId: stri
 
   logWebhookEvent({ source: 'mercadopago', payment_id: paymentId, payment_status: 'approved', reservation_id: reservationId, folio: r.folio, sig_valid: true, action: 'confirmed' });
   logAuditEvent({ event: 'payment.derived_confirmed', status: 'ok', reservation_id: reservationId, folio: r.folio, details: { payment_id: paymentId } });
+}
+
+/**
+ * Pago manual (transferencia/efectivo) marcado desde el admin: lo registra en
+ * `payments` (la regla "todo pago tiene casa" aplica también al dinero que no
+ * pasa por MP) y avisa por correo interno. Best-effort: nunca lanza, para no
+ * bloquear el botón del admin. Upsert por reserva → re-clicks no duplican.
+ */
+export async function registerManualPayment(reservationId: string): Promise<void> {
+  if (!SUPABASE_URL || !SERVICE_KEY) return;
+  try {
+    const rows = await supabaseGet<FullReservation>('reservations', {
+      id: `eq.${reservationId}`,
+      select: 'id,guest_name,guest_email,guest_phone,room_type,check_in,check_out,nights,total_mxn,adults,children,rooms,notes,folio,status,payment_method,payment_id,paid_at',
+    });
+    if (!rows.length) return;
+    const r = rows[0];
+
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/payments?on_conflict=provider,payment_id`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: SERVICE_KEY,
+          Authorization: `Bearer ${SERVICE_KEY}`,
+          Prefer: 'resolution=merge-duplicates,return=minimal',
+        },
+        body: JSON.stringify({
+          provider: 'manual',
+          payment_id: `manual-${reservationId}`,
+          reservation_id: reservationId,
+          folio: r.folio,
+          status: 'approved',
+          amount_mxn: r.total_mxn,
+          payer_email: r.guest_email,
+          payer_name: r.guest_name,
+          method: r.payment_method ?? 'cash',
+          raw: { marked_via: 'admin_mark_paid' },
+          updated_at: new Date().toISOString(),
+        }),
+      }
+    );
+    if (!res.ok) {
+      console.error('[PAYMENTS] registerManualPayment error', res.status, await res.text());
+    }
+
+    await sendManualPaymentInternalEmail(r);
+    logAuditEvent({ event: 'payment.manual_marked_paid', status: 'ok', reservation_id: reservationId, folio: r.folio, details: { amount: r.total_mxn, method: r.payment_method ?? 'cash' } });
+  } catch (err) {
+    console.error('[PAYMENTS] registerManualPayment failed', reservationId, err);
+  }
 }
 
 /** Último intento de pago registrado de una reserva (para la página del huésped). */
