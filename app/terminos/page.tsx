@@ -89,37 +89,25 @@ export default function TerminosPage() {
             </ul>
           </Section>
 
-          <Section title="7. Directorio de Negocios">
-            <p>
-              Los negocios que se registran en nuestro directorio (&quot;Guía Santiago&quot;) aceptan adicionalmente:
-            </p>
-            <ul style={{ paddingLeft: '1.5rem', lineHeight: 2, marginTop: '0.75rem' }}>
-              <li>Que la información publicada es verídica y de su responsabilidad.</li>
-              <li>Que Hotel El Encino puede moderar o retirar contenido que viole estas condiciones o sea inapropiado.</li>
-              <li>Que el listado gratuito no implica ninguna relación comercial o de representación con Hotel El Encino.</li>
-              <li>Que sus datos de contacto pueden ser visibles para usuarios del directorio.</li>
-            </ul>
-          </Section>
-
-          <Section title="8. Propiedad Intelectual">
+          <Section title="7. Propiedad Intelectual">
             <p>
               Todo el contenido de este sitio web (textos, fotografías, logotipos, diseño) es propiedad de Hotel El Encino Santiago o se usa bajo licencia. Queda prohibida su reproducción total o parcial sin autorización escrita.
             </p>
           </Section>
 
-          <Section title="9. Limitación de Responsabilidad">
+          <Section title="8. Limitación de Responsabilidad">
             <p>
               Hotel El Encino no será responsable por daños indirectos, incidentales o consecuentes derivados del uso de nuestros servicios, incluyendo pero no limitado a: pérdida de equipaje, accidentes fuera de las instalaciones del hotel, o interrupciones del servicio por causas de fuerza mayor (desastres naturales, actos de autoridad, pandemia, etc.).
             </p>
           </Section>
 
-          <Section title="10. Ley Aplicable y Jurisdicción">
+          <Section title="9. Ley Aplicable y Jurisdicción">
             <p>
               Estos términos se rigen por las leyes de los Estados Unidos Mexicanos. Para cualquier controversia, las partes se someten a la jurisdicción de los tribunales competentes del Estado de Nuevo León, renunciando a cualquier otro fuero que pudiera corresponderles por razón de sus domicilios presentes o futuros.
             </p>
           </Section>
 
-          <Section title="11. Contacto">
+          <Section title="10. Contacto">
             <p>
               Para aclaraciones sobre estos términos:
             </p>

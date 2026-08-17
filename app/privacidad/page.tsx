@@ -48,7 +48,6 @@ export default function PrivacidadPage() {
               <li><strong>Datos de reservación:</strong> nombre completo, correo electrónico, teléfono, fechas de estancia, tipo de habitación.</li>
               <li><strong>Datos de pago:</strong> procesados exclusivamente por Mercado Pago; Hotel El Encino no almacena datos de tarjetas.</li>
               <li><strong>Datos de navegación:</strong> dirección IP, tipo de navegador, páginas visitadas (Google Analytics 4, anonimizado).</li>
-              <li><strong>Datos de registro en directorio:</strong> nombre de negocio, correo electrónico, descripción e imágenes (solo si usa nuestra plataforma de directorio).</li>
             </ul>
           </Section>
 
