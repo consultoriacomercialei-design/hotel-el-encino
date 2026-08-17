@@ -13,7 +13,7 @@ import { ensureCheckinCode } from '@/app/lib/wallet/checkin-code';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 // .trim(): las envs de Vercel a veces llegan con \n colado al final.
-const HOTEL_EMAIL = (process.env.HOTEL_EMAIL || 'elencino_22@hotmail.com').trim();
+const HOTEL_EMAIL = (process.env.HOTEL_EMAIL || 'gerencia@hotelelencino.com').trim();
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'consultoriacomercialei@gmail.com').trim();
 const FROM = 'Hotel El Encino <reservaciones@hotelelencino.com>';
 
@@ -26,7 +26,7 @@ const FROM = 'Hotel El Encino <reservaciones@hotelelencino.com>';
  */
 const NOTIFY_RECIPIENTS = Array.from(
   new Set(
-    [HOTEL_EMAIL, ADMIN_EMAIL, 'elencino_22@hotmail.com', 'consultoriacomercialei@gmail.com']
+    [HOTEL_EMAIL, ADMIN_EMAIL, 'reservaciones@hotelelencino.com', 'consultoriacomercialei@gmail.com']
       .map((e) => e.trim())
       .filter(Boolean)
   )

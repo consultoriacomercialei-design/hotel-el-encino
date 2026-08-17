@@ -38,7 +38,7 @@ export default function PrivacidadPage() {
               <strong>Hotel El Encino Santiago</strong>, con domicilio en Hermenegildo Galeana 200, Col. Centro, Santiago, Nuevo León, C.P. 67310, México, es responsable del tratamiento de sus datos personales conforme a la <em>Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP)</em>.
             </p>
             <p style={{ marginTop: '1rem' }}>
-              Contacto de privacidad: <a href="mailto:elencino_22@hotmail.com" style={{ color: 'var(--warm)' }}>elencino_22@hotmail.com</a>
+              Contacto de privacidad: <a href="mailto:hola@hotelelencino.com" style={{ color: 'var(--warm)' }}>hola@hotelelencino.com</a>
             </p>
           </Section>
 
@@ -79,7 +79,7 @@ export default function PrivacidadPage() {
           <Section title="5. Derechos ARCO">
             <p>
               Como titular de sus datos, usted tiene derecho a <strong>Acceder, Rectificar, Cancelar u Oponerse (ARCO)</strong> al tratamiento de sus datos personales, así como a revocar su consentimiento en cualquier momento, enviando una solicitud a:{' '}
-              <a href="mailto:elencino_22@hotmail.com" style={{ color: 'var(--warm)' }}>elencino_22@hotmail.com</a>
+              <a href="mailto:hola@hotelelencino.com" style={{ color: 'var(--warm)' }}>hola@hotelelencino.com</a>
             </p>
             <p style={{ marginTop: '1rem' }}>
               Su solicitud deberá incluir: nombre completo, descripción clara del derecho a ejercer, y cualquier documento que facilite la localización de sus datos. Responderemos en un plazo máximo de 20 días hábiles.
@@ -121,7 +121,7 @@ export default function PrivacidadPage() {
               Hotel El Encino Santiago<br />
               Hermenegildo Galeana 200, Col. Centro<br />
               Santiago, Nuevo León, C.P. 67310, México<br />
-              <a href="mailto:elencino_22@hotmail.com" style={{ color: 'var(--warm)' }}>elencino_22@hotmail.com</a><br />
+              <a href="mailto:hola@hotelelencino.com" style={{ color: 'var(--warm)' }}>hola@hotelelencino.com</a><br />
               <a href="tel:+528123816588" style={{ color: 'var(--warm)' }}>+52 (81) 2381 6588</a>
             </address>
           </Section>

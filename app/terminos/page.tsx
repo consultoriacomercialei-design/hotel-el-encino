@@ -127,7 +127,7 @@ export default function TerminosPage() {
               Hotel El Encino Santiago<br />
               Hermenegildo Galeana 200, Col. Centro<br />
               Santiago, Nuevo León, C.P. 67310, México<br />
-              <a href="mailto:elencino_22@hotmail.com" style={{ color: 'var(--warm)' }}>elencino_22@hotmail.com</a><br />
+              <a href="mailto:hola@hotelelencino.com" style={{ color: 'var(--warm)' }}>hola@hotelelencino.com</a><br />
               <a href="tel:+528123816588" style={{ color: 'var(--warm)' }}>+52 (81) 2381 6588</a>
             </address>
           </Section>

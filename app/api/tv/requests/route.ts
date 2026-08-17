@@ -3,7 +3,7 @@ import { supabasePost } from '@/app/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
-const HOTEL_EMAIL = (process.env.HOTEL_EMAIL || 'elencino_22@hotmail.com').trim();
+const HOTEL_EMAIL = (process.env.HOTEL_EMAIL || 'gerencia@hotelelencino.com').trim();
 const ADMIN_EMAIL = 'gerencia@hotelelencino.com';
 const FROM = 'Hotel El Encino <reservaciones@hotelelencino.com>';
 
