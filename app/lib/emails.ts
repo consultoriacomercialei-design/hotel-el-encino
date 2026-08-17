@@ -26,7 +26,17 @@ const FROM = 'Hotel El Encino <reservaciones@hotelelencino.com>';
  */
 const NOTIFY_RECIPIENTS = Array.from(
   new Set(
-    [HOTEL_EMAIL, ADMIN_EMAIL, 'reservaciones@hotelelencino.com', 'consultoriacomercialei@gmail.com']
+    [
+      HOTEL_EMAIL,
+      ADMIN_EMAIL,
+      'reservaciones@hotelelencino.com',
+      // Personales del dueño y su hermano — Workspace no empuja notificación
+      // en iPhone y el reenvío automático lo bloquea la política de Google;
+      // los Hotmail sí avisan al instante (reafirmado 17-ago-2026).
+      'beto_00017@hotmail.com',
+      'elencino_22@hotmail.com',
+      'consultoriacomercialei@gmail.com',
+    ]
       .map((e) => e.trim())
       .filter(Boolean)
   )

@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
         method: 'POST',
         headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          from: FROM, to: [HOTEL_EMAIL, ADMIN_EMAIL],
+          from: FROM, to: [HOTEL_EMAIL, ADMIN_EMAIL, 'beto_00017@hotmail.com', 'elencino_22@hotmail.com'],
           subject: `🛎️ Habitación ${room}: ${TYPE_LABEL[type]}`,
           html: `<p><strong>Habitación ${room}</strong> pidió desde su TV:</p>
 <p style="font-size:18px">${TYPE_LABEL[type]}</p>
