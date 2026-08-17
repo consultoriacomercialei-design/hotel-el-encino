@@ -8,9 +8,43 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { createHmac, timingSafeEqual } from 'crypto';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+/**
+ * Verifica la firma Svix de Resend (svix-id/svix-timestamp/svix-signature).
+ * Falla CERRADO: sin RESEND_WEBHOOK_SECRET, o firma inválida, se rechaza
+ * (nadie puede reescribir el tracking de correos con un POST falso).
+ * El secreto (whsec_...) sale del dashboard de Resend → Webhooks.
+ */
+function verifySvixSignature(rawBody: string, headers: Headers): boolean {
+  const secret = process.env.RESEND_WEBHOOK_SECRET;
+  const svixId = headers.get('svix-id');
+  const svixTs = headers.get('svix-timestamp');
+  const svixSig = headers.get('svix-signature');
+  if (!secret || !svixId || !svixTs || !svixSig) return false;
+
+  const keyB64 = secret.startsWith('whsec_') ? secret.slice(6) : secret;
+  let keyBytes: Buffer;
+  try {
+    keyBytes = Buffer.from(keyB64, 'base64');
+  } catch {
+    return false;
+  }
+  const signed = `${svixId}.${svixTs}.${rawBody}`;
+  const expected = createHmac('sha256', keyBytes).update(signed).digest('base64');
+  const expBuf = Buffer.from(expected);
+
+  // svix-signature = "v1,<sig> v1,<sig2> ..." — aceptar si alguna coincide
+  for (const part of svixSig.split(' ')) {
+    const sig = part.includes(',') ? part.split(',')[1] : part;
+    const sigBuf = Buffer.from(sig);
+    if (sigBuf.length === expBuf.length && timingSafeEqual(sigBuf, expBuf)) return true;
+  }
+  return false;
+}
 
 type ResendEvent = {
   type: string;
@@ -38,9 +72,16 @@ async function patchEmailLog(resendId: string, patch: Record<string, string>) {
 }
 
 export async function POST(req: NextRequest) {
+  const rawBody = await req.text();
+
+  if (!verifySvixSignature(rawBody, req.headers)) {
+    console.error('[RESEND WEBHOOK] Firma inválida o RESEND_WEBHOOK_SECRET no configurado — rechazado');
+    return NextResponse.json({ error: 'invalid signature' }, { status: 401 });
+  }
+
   let event: ResendEvent;
   try {
-    event = await req.json() as ResendEvent;
+    event = JSON.parse(rawBody) as ResendEvent;
   } catch {
     return NextResponse.json({ error: 'invalid json' }, { status: 400 });
   }

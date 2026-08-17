@@ -8,10 +8,26 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { sendText, markRead } from '@/app/lib/whatsapp-cloud';
 import { handleWAMessage } from '@/app/lib/wa-agent';
 
 const VERIFY_TOKEN = process.env.WA_VERIFY_TOKEN;
+
+/**
+ * Verifica la firma X-Hub-Signature-256 de Meta contra el App Secret.
+ * Falla CERRADO: sin WA_APP_SECRET configurado, o con firma inválida,
+ * se rechaza el webhook (nadie puede inyectar mensajes falsos que
+ * disparen el LLM o envíen WhatsApp desde el número del hotel).
+ */
+function verifyMetaSignature(rawBody: string, signature: string | null): boolean {
+  const appSecret = process.env.WA_APP_SECRET;
+  if (!appSecret || !signature) return false;
+  const expected = 'sha256=' + createHmac('sha256', appSecret).update(rawBody).digest('hex');
+  const a = Buffer.from(signature);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 
 // ─── GET: webhook verification ────────────────────────────────────────────────
 
@@ -32,9 +48,17 @@ export async function GET(req: NextRequest) {
 // ─── POST: incoming messages ──────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  const rawBody = await req.text();
+
+  // Verificar firma de Meta ANTES de procesar (falla cerrado)
+  if (!verifyMetaSignature(rawBody, req.headers.get('x-hub-signature-256'))) {
+    console.error('[WA-WEBHOOK] Firma inválida o WA_APP_SECRET no configurado — rechazado');
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+  }
+
   let body: Record<string, unknown>;
   try {
-    body = await req.json();
+    body = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }

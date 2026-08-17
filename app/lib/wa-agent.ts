@@ -9,20 +9,22 @@
  */
 
 // ─── Pricing ─────────────────────────────────────────────────────────────────
-// TODO: el bot está DORMIDO (nunca lanzado). Sus tarifas/capacidad están
-// hardcodeadas aparte y NO conocen ocupación/temporadas de hotel_settings. Al
-// relanzarlo, migrar a `app/lib/pricing.ts` + `fetchPricingConfig()` para que
-// cotice igual que el modal web y el servidor.
-// Doble: $1,500 entre semana · $2,500 viernes/sábado/domingo
+// TODO(lanzamiento): el bot está DORMIDO (nunca lanzado). Estas tarifas están
+// hardcodeadas y NO conocen temporadas/ocupación de hotel_settings (ej. Semana
+// Santa $3,000). Al relanzarlo — sesión de conserje WhatsApp 08-ago — MIGRAR a
+// `app/lib/pricing.ts` + `fetchPricingConfig()` para que cotice IGUAL que el
+// modal web y el servidor, y probar en vivo. Mientras, base corregida a la
+// tarifa real vigente ($1,800 entre semana · $2,500 fin de semana) para que el
+// bot no cotice el precio viejo de $1,500 si se despertara.
 const ROOM_PRICES_WEEKDAY: Record<string, number> = {
-  doble:  1500,
-  suite:  1500,
+  doble:  1800,
+  suite:  1800,
   grupal: 1800,
 };
 const ROOM_PRICES_WEEKEND: Record<string, number> = {
   doble:  2500,
-  suite:  1500,
-  grupal: 1800,
+  suite:  2500,
+  grupal: 2500,
 };
 const ROOM_LABELS: Record<string, string> = {
   doble:  'Habitación Doble',

@@ -34,7 +34,7 @@ const faqs = [
   },
   {
     q: '¿Puedo cancelar mi reservación?',
-    a: 'Puedes cancelar contactándonos por WhatsApp. Si pagaste en línea, coordinaremos el reembolso contigo directamente. Para más detalles sobre política de cancelación, escríbenos al +52 (81) 2381 6588.',
+    a: 'Sí. Cancelando con al menos 15 días de anticipación te devolvemos el 100%; con menos de 15 días, se devuelve el 50%. En casos aprobados por la administración puede ofrecerse un cambio de fecha o traspaso de la reservación a otra persona (solo con más de 48 horas de anticipación). Escríbenos por WhatsApp al +52 (81) 2381 6588.',
   },
 ];
 

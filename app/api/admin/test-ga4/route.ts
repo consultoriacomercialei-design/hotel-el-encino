@@ -1,7 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { BetaAnalyticsDataClient } from '@google-analytics/data';
+import { verifyAdminToken } from '@/app/lib/admin-auth';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const token = req.cookies.get('hotel_admin_session')?.value;
+  if (!verifyAdminToken(token)) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  }
+
   const email = process.env.GA4_CLIENT_EMAIL;
   const key   = process.env.GA4_PRIVATE_KEY?.replace(/\\n/g, '\n');
   const propId = process.env.GA4_PROPERTY_ID;

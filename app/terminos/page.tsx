@@ -59,9 +59,11 @@ export default function TerminosPage() {
 
           <Section title="4. Cancelaciones y Reembolsos">
             <ul style={{ paddingLeft: '1.5rem', lineHeight: 2 }}>
-              <li><strong>Cancelación gratuita:</strong> hasta 48 horas antes de la fecha de check-in.</li>
-              <li><strong>Cancelación tardía:</strong> menos de 48 horas antes, se cobra el equivalente a <strong>1 noche</strong> de hospedaje.</li>
+              <li><strong>Cancelación con devolución del 100%:</strong> si se cancela con al menos <strong>15 días de anticipación</strong> a la fecha de check-in.</li>
+              <li><strong>Cancelación con menos de 15 días de anticipación:</strong> se devuelve el <strong>50%</strong> del monto pagado.</li>
               <li><strong>No show:</strong> si no se presenta sin cancelar, se cobra el total de la reservación.</li>
+              <li><strong>Cambio de fecha:</strong> en ciertas situaciones puede ofrecerse un cambio de fecha, únicamente si faltan <strong>más de 48 horas</strong> para el check-in y solo en casos aprobados por la administración; sujeto a disponibilidad.</li>
+              <li><strong>Traspaso de reservación:</strong> si el titular no puede utilizar su reservación, puede solicitar traspasarla a otra persona, únicamente con <strong>más de 48 horas</strong> de anticipación y solo en casos aprobados por la administración.</li>
               <li>Los reembolsos por pagos en línea (Mercado Pago) se procesan en un plazo de <strong>5 a 10 días hábiles</strong> al método de pago original.</li>
               <li>En caso de cancelación por causas imputables al hotel (fuerza mayor, daños, etc.), se realizará el reembolso total sin penalización.</li>
             </ul>
