@@ -221,6 +221,7 @@ export async function sendConfirmedEmails(
           </div>
           ${paymentBlock}
           ${walletButtonHtml(checkinCode)}
+          <p style="color:#6b6b6b;font-size:0.8rem;background:#f5f2ec;border-radius:8px;padding:10px 14px">🗓️ <strong>Política de cancelación:</strong> devolución del 100% cancelando con al menos 15 días de anticipación; con menos de 15 días se devuelve el 50%. Cambio de fecha o traspaso de la reservación: solo con más de 48 horas de anticipación y aprobación de administración. <a href="https://hotelelencino.com/terminos" style="color:#856d47">Ver términos</a>.</p>
           <p style="color:#6b6b6b;font-size:0.85rem">📍 Hermenegildo Galeana 200, Santiago, N.L. · 📞 +52 (81) 2381 6588</p>
           <a href="https://wa.me/528123816588" style="display:inline-block;margin-top:12px;padding:10px 22px;background:#25D366;color:#fff;text-decoration:none;border-radius:980px;font-size:0.85rem">Contactar por WhatsApp</a>
         </div>
@@ -296,6 +297,7 @@ export async function sendPendingCashEmails(
             <p style="margin:6px 0 0;color:#7a5c00;font-size:0.82rem">Si no recibimos tu mensaje en ese tiempo, el lugar quedará disponible para otros huéspedes.</p>
           </div>
           <a href="https://wa.me/528123816588?text=Hola%2C+quiero+confirmar+mi+reservaci%C3%B3n+${folio}" style="display:inline-block;padding:12px 28px;background:#25D366;color:#fff;text-decoration:none;border-radius:980px;font-size:0.9rem;font-weight:600">Confirmar por WhatsApp</a>
+          <p style="color:#6b6b6b;font-size:0.8rem;background:#f5f2ec;border-radius:8px;padding:10px 14px">🗓️ <strong>Política de cancelación:</strong> devolución del 100% cancelando con al menos 15 días de anticipación; con menos de 15 días se devuelve el 50%. Cambio de fecha o traspaso de la reservación: solo con más de 48 horas de anticipación y aprobación de administración. <a href="https://hotelelencino.com/terminos" style="color:#856d47">Ver términos</a>.</p>
           <p style="color:#6b6b6b;font-size:0.85rem;margin-top:20px">📍 Hermenegildo Galeana 200, Santiago, N.L. · 📞 +52 (81) 2381 6588</p>
         </div>
       `,
@@ -386,6 +388,7 @@ export async function sendWaitlistEmails(
             ${guestRowsHtml(payload)}
           </div>
           <p style="color:#4a4a4a">Estamos buscando las mejores opciones para tus fechas y te contactaremos a la brevedad para confirmar los detalles.</p>
+          <p style="color:#6b6b6b;font-size:0.8rem;background:#f5f2ec;border-radius:8px;padding:10px 14px">🗓️ <strong>Política de cancelación:</strong> devolución del 100% cancelando con al menos 15 días de anticipación; con menos de 15 días se devuelve el 50%. Cambio de fecha o traspaso de la reservación: solo con más de 48 horas de anticipación y aprobación de administración. <a href="https://hotelelencino.com/terminos" style="color:#856d47">Ver términos</a>.</p>
           <p style="color:#6b6b6b;font-size:0.85rem">📍 Hermenegildo Galeana 200, Santiago, N.L. · 📞 +52 (81) 2381 6588</p>
           <a href="https://wa.me/528123816588" style="display:inline-block;margin-top:12px;padding:10px 22px;background:#25D366;color:#fff;text-decoration:none;border-radius:980px;font-size:0.85rem">Contactar por WhatsApp</a>
         </div>
@@ -604,6 +607,7 @@ export async function sendPaymentConfirmedEmails(reservation: FullReservation) {
             <p style="margin:0"><strong>Total pagado:</strong> $${reservation.total_mxn.toLocaleString('es-MX')} MXN</p>
           </div>
           ${walletButtonHtml(checkinCode)}
+          <p style="color:#6b6b6b;font-size:0.8rem;background:#f5f2ec;border-radius:8px;padding:10px 14px">🗓️ <strong>Política de cancelación:</strong> devolución del 100% cancelando con al menos 15 días de anticipación; con menos de 15 días se devuelve el 50%. Cambio de fecha o traspaso de la reservación: solo con más de 48 horas de anticipación y aprobación de administración. <a href="https://hotelelencino.com/terminos" style="color:#856d47">Ver términos</a>.</p>
           <p style="color:#6b6b6b;font-size:0.85rem">📍 Hermenegildo Galeana 200, Santiago, N.L. · 📞 +52 (81) 2381 6588</p>
           <a href="https://wa.me/528123816588" style="display:inline-block;margin-top:12px;padding:10px 22px;background:#25D366;color:#fff;text-decoration:none;border-radius:980px;font-size:0.85rem">Contactar por WhatsApp</a>
         </div>
@@ -725,6 +729,7 @@ export async function sendReminderEmails(reservation: {
           </div>
           <a href="${waConfirmUrl}" style="display:inline-block;padding:14px 32px;background:#25D366;color:#fff;text-decoration:none;border-radius:980px;font-size:1rem;font-weight:700">Confirmar por WhatsApp ahora</a>
           <p style="color:#6b6b6b;font-size:0.8rem;margin-top:20px">Si ya no deseas la reservación, simplemente ignora este correo y el lugar se liberará automáticamente.</p>
+          <p style="color:#6b6b6b;font-size:0.8rem;background:#f5f2ec;border-radius:8px;padding:10px 14px">🗓️ <strong>Política de cancelación:</strong> devolución del 100% cancelando con al menos 15 días de anticipación; con menos de 15 días se devuelve el 50%. Cambio de fecha o traspaso de la reservación: solo con más de 48 horas de anticipación y aprobación de administración. <a href="https://hotelelencino.com/terminos" style="color:#856d47">Ver términos</a>.</p>
           <p style="color:#6b6b6b;font-size:0.85rem">📍 Hermenegildo Galeana 200, Santiago, N.L. · 📞 +52 (81) 2381 6588</p>
         </div>
       `,

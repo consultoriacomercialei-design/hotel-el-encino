@@ -995,6 +995,12 @@ export default function BookingModal() {
                       Elige tu método de pago en el siguiente paso
                     </p>
                   )}
+                  {!isWaitlist && (
+                    <p style={{ fontFamily: 'var(--sans)', fontSize: '0.68rem', color: 'rgba(15,15,15,0.55)', textAlign: 'center', marginTop: '7px', lineHeight: 1.5 }}>
+                      Cancelación: 100% de devolución con 15+ días de anticipación · 50% con menos de 15 días.{' '}
+                      <a href="/terminos" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(15,15,15,0.7)', textDecoration: 'underline' }}>Ver términos</a>
+                    </p>
+                  )}
                 </div>
               )}
 
