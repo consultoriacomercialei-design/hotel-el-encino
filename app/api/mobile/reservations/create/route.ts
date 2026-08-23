@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
     guest_email: (b.guest_email ?? '').trim().slice(0, 120) || null,
     adults: Math.min(Math.max(Number(b.adults) || 2, 1), 12),
     room_type: (b.room_type ?? 'doble').slice(0, 40),
+    room: (typeof (b as { room?: string }).room === 'string' ? (b as { room?: string }).room!.trim().slice(0, 20) : '') || null,
     rooms: Math.min(Math.max(Number(b.rooms) || 1, 1), 6),
     check_in: checkIn,
     check_out: checkOut,

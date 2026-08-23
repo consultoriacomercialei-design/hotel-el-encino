@@ -4,8 +4,23 @@ import { supabaseGet, supabasePatch } from '@/app/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
-// POST /api/mobile/reservations/[id]/checkout — marca la salida.
-// (Daños/encuesta llegan en la siguiente iteración; esto libera el cuarto.)
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// POST /api/mobile/reservations/[id]/checkout — check-out b2 (23-ago):
+// REQUIERE la revisión del cuarto (decisión del dueño: obligatoria):
+// checklist de salida + ¿daños? (nota y foto opcionales). Al confirmar:
+// guarda checkout_review, marca checkout_at y pone el cuarto "por limpiar".
+
+interface Body {
+  review?: {
+    items?: Record<string, boolean>;
+    damages?: boolean;
+    damage_note?: string;
+    damage_photo_b64?: string;
+  };
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -14,8 +29,10 @@ export async function POST(
   if (!staff) return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
 
   const { id } = await params;
-  const rows = await supabaseGet<{ id: string; status: string; checkout_at: string | null }>('reservations', {
-    select: 'id,status,checkout_at',
+  const body = (await req.json().catch(() => ({}))) as Body;
+
+  const rows = await supabaseGet<{ id: string; status: string; checkout_at: string | null; room: string | null }>('reservations', {
+    select: 'id,status,checkout_at,room',
     id: `eq.${id}`,
     limit: '1',
   });
@@ -23,7 +40,64 @@ export async function POST(
   if (!r) return NextResponse.json({ success: false, error: 'Reserva no encontrada' }, { status: 404 });
   if (r.checkout_at) return NextResponse.json({ success: true, data: { already: true } });
 
-  const ok = await supabasePatch('reservations', id, { checkout_at: new Date().toISOString() });
+  if (!body.review || typeof body.review.damages !== 'boolean') {
+    return NextResponse.json(
+      { success: false, error: 'Falta la revisión del cuarto (obligatoria al check-out)' },
+      { status: 400 }
+    );
+  }
+
+  const review: Record<string, unknown> = {
+    items: body.review.items ?? {},
+    damages: body.review.damages,
+    damage_note: body.review.damage_note?.slice(0, 500) ?? null,
+    by: staff.full_name,
+    at: new Date().toISOString(),
+  };
+
+  // Foto de daño al bucket privado (opcional).
+  if (body.review.damage_photo_b64 && SUPABASE_URL && SERVICE_KEY) {
+    const buf = Buffer.from(body.review.damage_photo_b64, 'base64');
+    if (buf.length >= 100 && buf.length <= 4_000_000) {
+      const path = `manager/${id}/${Date.now()}-dano.jpg`;
+      const up = await fetch(`${SUPABASE_URL}/storage/v1/object/guest-ids/${path}`, {
+        method: 'POST',
+        headers: {
+          apikey: SERVICE_KEY,
+          Authorization: `Bearer ${SERVICE_KEY}`,
+          'Content-Type': 'image/jpeg',
+          'x-upsert': 'true',
+        },
+        body: buf,
+      });
+      if (up.ok) review.damage_photo_path = path;
+    }
+  }
+
+  const ok = await supabasePatch('reservations', id, {
+    checkout_at: new Date().toISOString(),
+    checkout_review: review,
+  });
   if (!ok) return NextResponse.json({ success: false, error: 'No se pudo registrar' }, { status: 500 });
+
+  // El cuarto pasa SOLO a "por limpiar" (si la reserva tiene cuarto asignado).
+  if (r.room && SUPABASE_URL && SERVICE_KEY) {
+    await fetch(`${SUPABASE_URL}/rest/v1/hotel_rooms_state`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SERVICE_KEY,
+        Authorization: `Bearer ${SERVICE_KEY}`,
+        Prefer: 'resolution=merge-duplicates',
+      },
+      body: JSON.stringify({
+        room: r.room,
+        state: 'dirty',
+        note: review.damages ? 'Revisar daño reportado al check-out' : null,
+        updated_at: new Date().toISOString(),
+      }),
+    }).catch(() => null);
+  }
+
   return NextResponse.json({ success: true, data: { already: false } });
 }

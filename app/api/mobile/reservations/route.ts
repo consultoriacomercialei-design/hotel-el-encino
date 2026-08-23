@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   const sp = req.nextUrl.searchParams;
   const select =
-    'id,folio,guest_name,guest_email,guest_phone,room_type,rooms,check_in,check_out,nights,total_mxn,status,source,checkin_at,checkout_at,checkin_code,paid_at,payment_method,notes,created_at';
+    'id,folio,guest_name,guest_email,guest_phone,room_type,rooms,room,check_in,check_out,nights,total_mxn,status,source,checkin_at,checkout_at,checkin_code,paid_at,payment_method,notes,created_at,late_checkout_until,damage_consent_at,id_photo_path,signature_path';
 
   const q = sp.get('q')?.trim();
   if (q) {

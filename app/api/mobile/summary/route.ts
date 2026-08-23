@@ -39,13 +39,13 @@ export async function GET(req: NextRequest) {
 
   const [arrivals, departures, weekRows, openRequests, pendingPay] = await Promise.all([
     supabaseGet<ReservationRow>('reservations', {
-      select: 'id,folio,guest_name,guest_phone,room_type,rooms,check_in,check_out,nights,total_mxn,status,checkin_at,checkout_at,source,checkin_code',
+      select: 'id,folio,guest_name,guest_phone,guest_email,room_type,rooms,room,check_in,check_out,nights,total_mxn,status,checkin_at,checkout_at,source,checkin_code,late_checkout_until,damage_consent_at,id_photo_path,signature_path',
       check_in: `eq.${today}`,
       status: 'in.(confirmed,pending_payment)',
       order: 'guest_name.asc',
     }),
     supabaseGet<ReservationRow>('reservations', {
-      select: 'id,folio,guest_name,guest_phone,room_type,rooms,check_in,check_out,nights,total_mxn,status,checkin_at,checkout_at,source,checkin_code',
+      select: 'id,folio,guest_name,guest_phone,guest_email,room_type,rooms,room,check_in,check_out,nights,total_mxn,status,checkin_at,checkout_at,source,checkin_code,late_checkout_until,damage_consent_at,id_photo_path,signature_path',
       check_out: `eq.${today}`,
       status: 'eq.confirmed',
       order: 'guest_name.asc',
