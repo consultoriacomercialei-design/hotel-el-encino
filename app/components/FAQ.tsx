@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
 
-const faqs = [
+const defaultFaqs = [
   {
     q: '¿El estacionamiento tiene costo adicional?',
     a: 'No. El estacionamiento privado dentro del hotel está incluido en todas las tarifas, sin costo extra.',
@@ -53,7 +53,7 @@ function FadeIn({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
   );
 }
 
-function FAQItem({ faq, index }: { faq: (typeof faqs)[0]; index: number }) {
+function FAQItem({ faq, index }: { faq: (typeof defaultFaqs)[0]; index: number }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: '-40px' });
@@ -146,7 +146,10 @@ function FAQItem({ faq, index }: { faq: (typeof faqs)[0]; index: number }) {
   );
 }
 
-export default function FAQ() {
+// items: FAQ editable desde El Encino Manager (hotel_settings.faqs);
+// sin prop o vacío → contenido de siempre.
+export default function FAQ({ items }: { items?: { q: string; a: string }[] }) {
+  const faqs = items && items.length > 0 ? items : defaultFaqs;
   return (
     <section
       id="preguntas-frecuentes"

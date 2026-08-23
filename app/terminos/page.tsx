@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { fetchHotelPolicies } from '../lib/hotel-config';
 
 export const metadata: Metadata = {
   title: 'Términos y Condiciones — Hotel El Encino Santiago',
@@ -8,7 +9,9 @@ export const metadata: Metadata = {
   alternates: { canonical: '/terminos' },
 };
 
-export default function TerminosPage() {
+export default async function TerminosPage() {
+  // Políticas editables desde El Encino Manager; null → texto de siempre.
+  const policies = await fetchHotelPolicies();
   return (
     <main style={{ background: 'var(--paper)', color: 'var(--ink)', minHeight: '100vh' }}>
       {/* Header */}
@@ -80,12 +83,18 @@ export default function TerminosPage() {
 
           <Section title="6. Políticas del Hotel">
             <ul style={{ paddingLeft: '1.5rem', lineHeight: 2 }}>
-              <li><strong>No se permiten mascotas.</strong></li>
-              <li><strong>Prohibido fumar</strong> dentro de las habitaciones y áreas comunes.</li>
-              <li>Respeto al horario de silencio: 10:00 PM a 8:00 AM.</li>
-              <li>El hotel no se hace responsable por objetos de valor no resguardados en la habitación.</li>
-              <li>Daños a las instalaciones serán cargados a la tarjeta o depósito del huésped.</li>
-              <li>El acceso a las instalaciones es exclusivo para huéspedes registrados.</li>
+              {policies ? (
+                policies.map((p, i) => <li key={i}>{p.text}</li>)
+              ) : (
+                <>
+                  <li><strong>No se permiten mascotas.</strong></li>
+                  <li><strong>Prohibido fumar</strong> dentro de las habitaciones y áreas comunes.</li>
+                  <li>Respeto al horario de silencio: 10:00 PM a 8:00 AM.</li>
+                  <li>El hotel no se hace responsable por objetos de valor no resguardados en la habitación.</li>
+                  <li>Daños a las instalaciones serán cargados a la tarjeta o depósito del huésped.</li>
+                  <li>El acceso a las instalaciones es exclusivo para huéspedes registrados.</li>
+                </>
+              )}
             </ul>
           </Section>
 

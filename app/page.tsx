@@ -17,12 +17,16 @@ import BookingModal from './components/BookingModal';
 import BookingFloat from './components/BookingFloat';
 import AIChat from './components/AIChat';
 import { fetchGoogleReviews } from './lib/google-reviews';
-import { fetchRoomPrices } from './lib/hotel-config';
+import { fetchRoomPrices, fetchFaqs } from './lib/hotel-config';
 
 export const dynamic = 'force-dynamic'; // render server-side so env vars are available
 
 export default async function Home() {
-  const [googleData, prices] = await Promise.all([fetchGoogleReviews(4), fetchRoomPrices()]);
+  const [googleData, prices, faqItems] = await Promise.all([
+    fetchGoogleReviews(4),
+    fetchRoomPrices(),
+    fetchFaqs(),
+  ]);
 
   return (
     <>
@@ -55,7 +59,7 @@ export default async function Home() {
           liveReviews={googleData?.reviews}
           summary={googleData ? { rating: googleData.rating, total: googleData.user_ratings_total } : undefined}
         />
-        <FAQ />
+        <FAQ items={faqItems ?? undefined} />
         <MapSection />
       </main>
       <Footer />

@@ -21,7 +21,11 @@ export async function GET(req: NextRequest) {
 
   const qp = req.nextUrl.searchParams;
   const from = DATE_RE.test(qp.get('from') ?? '') ? qp.get('from')! : mtyDate(-1);
-  const to = DATE_RE.test(qp.get('to') ?? '') ? qp.get('to')! : mtyDate(45);
+  const to = DATE_RE.test(qp.get('to') ?? '') ? qp.get('to')! : mtyDate(365);
+  // all=1 → incluye canceladas/no-show (filtro de la app b8).
+  const statusFilter = qp.get('all') === '1'
+    ? 'in.(confirmed,pending_payment,checked_out,cancelled,no_show)'
+    : 'in.(confirmed,pending_payment,checked_out)';
 
   const [reservations, rooms] = await Promise.all([
     supabaseGet<Record<string, unknown>>('reservations', {
@@ -29,9 +33,9 @@ export async function GET(req: NextRequest) {
         'id,folio,guest_name,guest_phone,room_type,rooms,room,check_in,check_out,nights,total_mxn,status,checkin_at,checkout_at,source,checkin_code,late_checkout_until',
       check_in: `lte.${to}`,
       check_out: `gte.${from}`,
-      status: 'in.(confirmed,pending_payment,checked_out)',
+      status: statusFilter,
       order: 'check_in.asc',
-      limit: '300',
+      limit: '500',
     }),
     supabaseGet<Record<string, unknown>>('hotel_rooms_state', {
       select: 'room,state,note,blocked_until,updated_at',

@@ -141,3 +141,51 @@ export const fetchPricingConfig = unstable_cache(async (): Promise<PricingConfig
     return fallback;
   }
 }, ['hotel-settings', 'pricing'], { tags: [HOTEL_SETTINGS_TAG], revalidate: SETTINGS_TTL_SECONDS });
+
+// FAQ y Políticas del hotel — editables desde El Encino Manager (b8).
+// Fallback: null → el componente usa su contenido de siempre.
+
+export interface FaqItem { q: string; a: string }
+export interface PolicyItem { text: string }
+
+export const fetchFaqs = unstable_cache(async (): Promise<FaqItem[] | null> => {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  try {
+    const res = await fetch(
+      `${url}/rest/v1/hotel_settings?select=key,value&key=eq.faqs`,
+      {
+        headers: { apikey: key, Authorization: `Bearer ${key}`, 'Cache-Control': 'no-store' },
+        cache: 'no-store',
+      }
+    );
+    if (!res.ok) return null;
+    const rows: { key: string; value: unknown }[] = await res.json();
+    const value = rows[0]?.value;
+    return Array.isArray(value) && value.length > 0 ? (value as FaqItem[]) : null;
+  } catch {
+    return null;
+  }
+}, ['hotel-settings', 'faqs'], { tags: [HOTEL_SETTINGS_TAG], revalidate: SETTINGS_TTL_SECONDS });
+
+export const fetchHotelPolicies = unstable_cache(async (): Promise<PolicyItem[] | null> => {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  try {
+    const res = await fetch(
+      `${url}/rest/v1/hotel_settings?select=key,value&key=eq.hotel_policies`,
+      {
+        headers: { apikey: key, Authorization: `Bearer ${key}`, 'Cache-Control': 'no-store' },
+        cache: 'no-store',
+      }
+    );
+    if (!res.ok) return null;
+    const rows: { key: string; value: unknown }[] = await res.json();
+    const value = rows[0]?.value;
+    return Array.isArray(value) && value.length > 0 ? (value as PolicyItem[]) : null;
+  } catch {
+    return null;
+  }
+}, ['hotel-settings', 'hotel-policies'], { tags: [HOTEL_SETTINGS_TAG], revalidate: SETTINGS_TTL_SECONDS });
