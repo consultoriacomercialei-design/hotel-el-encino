@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
         'id,folio,guest_name,guest_phone,room_type,rooms,room,check_in,check_out,nights,total_mxn,status,checkin_at,checkout_at,source,checkin_code,late_checkout_until',
       check_in: `lte.${to}`,
       check_out: `gte.${from}`,
-      status: 'in.(confirmed,pending_payment)',
+      status: 'in.(confirmed,pending_payment,checked_out)',
       order: 'check_in.asc',
       limit: '300',
     }),

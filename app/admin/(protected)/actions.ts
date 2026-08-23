@@ -246,7 +246,32 @@ export async function patchReservationAction(id: string, action: string) {
     const r = rows[0];
     if (!r) return { ok: false, error: 'Reservación no encontrada' };
 
-    await supabasePatch('reservations', id, { status: 'checked_out' });
+    // checkout_at es la señal que lee El Encino Manager — SIEMPRE junto con
+    // el status (bug 23-ago: el admin solo ponía status y la app no se enteraba;
+    // además el CHECK de la tabla no admitía 'checked_out' y el patch fallaba
+    // EN SILENCIO mientras el correo salía igual). Ahora falla RUIDOSO.
+    const patched = await supabasePatch('reservations', id, {
+      status: 'checked_out',
+      checkout_at: new Date().toISOString(),
+    });
+    if (!patched) {
+      return { ok: false, error: 'No se pudo registrar el check-out (la base lo rechazó) — NO se envió correo.' };
+    }
+
+    // El cuarto asignado pasa a "por limpiar" (misma regla que la app).
+    const room = (r as FullReservation & { room?: string | null }).room;
+    if (room && process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      fetch(`${process.env.SUPABASE_URL}/rest/v1/hotel_rooms_state`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+          Prefer: 'resolution=merge-duplicates',
+        },
+        body: JSON.stringify({ room, state: 'dirty', updated_at: new Date().toISOString() }),
+      }).catch(() => {});
+    }
 
     await sendCheckoutEmail(r).catch((err) =>
       console.error('[ADMIN/CHECKOUT] Error al enviar correo de check-out:', err)

@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
     select,
     check_in: `lt.${to}`,
     check_out: `gt.${from}`,
-    status: 'in.(confirmed,pending_payment)',
+    status: 'in.(confirmed,pending_payment,checked_out)',
     order: 'check_in.asc',
     limit: '300',
   });

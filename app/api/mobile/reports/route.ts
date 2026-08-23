@@ -35,7 +35,7 @@ async function monthStats(month: string) {
 
   const rows = await supabaseGet<ResRow>('reservations', {
     select: 'check_in,check_out,nights,total_mxn,rooms,status',
-    status: 'eq.confirmed',
+    status: 'in.(confirmed,checked_out)',
     check_in: `lt.${endExclusive}`,
     check_out: `gt.${start}`,
     limit: '500',

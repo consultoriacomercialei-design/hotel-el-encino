@@ -47,14 +47,14 @@ export async function GET(req: NextRequest) {
     supabaseGet<ReservationRow>('reservations', {
       select: 'id,folio,guest_name,guest_phone,guest_email,room_type,rooms,room,check_in,check_out,nights,total_mxn,status,checkin_at,checkout_at,source,checkin_code,late_checkout_until,damage_consent_at,id_photo_path,signature_path',
       check_out: `eq.${today}`,
-      status: 'eq.confirmed',
+      status: 'in.(confirmed,checked_out)',
       order: 'guest_name.asc',
     }),
     supabaseGet<{ total_mxn: number | null; check_in: string; nights: number | null }>('reservations', {
       select: 'total_mxn,check_in,nights',
       check_in: `gte.${today}`,
       and: `(check_in.lte.${weekEnd})`,
-      status: 'eq.confirmed',
+      status: 'in.(confirmed,checked_out)',
       limit: '200',
     }),
     supabaseGet<{ id: string }>('service_requests', {

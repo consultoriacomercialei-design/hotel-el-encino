@@ -77,6 +77,7 @@ export async function POST(
   const ok = await supabasePatch('reservations', id, {
     checkout_at: new Date().toISOString(),
     checkout_review: review,
+    status: 'checked_out',
   });
   if (!ok) return NextResponse.json({ success: false, error: 'No se pudo registrar' }, { status: 500 });
 
