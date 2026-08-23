@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabasePost } from '@/app/lib/supabase';
+import { sendHotelPush } from '@/app/lib/apns-hotel';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +41,14 @@ export async function POST(req: NextRequest) {
     room_number: room, request_type: type, note,
   });
   if (!row) return NextResponse.json({ error: 'No se pudo registrar' }, { status: 500 });
+
+  // Push a El Encino Manager (dueño+hermano) — sonido propio de request,
+  // best-effort: el correo de abajo sigue siendo el respaldo.
+  sendHotelPush({
+    title: `Habitación ${room}`,
+    body: TYPE_LABEL[type] + (note ? ` — ${note.slice(0, 80)}` : ''),
+    url: `encino://request/${row.id}`,
+  }).catch((e: unknown) => console.error('[tv/requests] push failed', e));
 
   // Aviso interno best-effort (fetch crudo a Resend, mismo patrón que emails.ts):
   // la solicitud ya quedó en el admin aunque el correo falle.
