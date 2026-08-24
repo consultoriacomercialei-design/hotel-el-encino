@@ -41,13 +41,13 @@ export async function GET(req: NextRequest) {
 
   const [arrivals, departures, weekRows, openRequests, pendingPay, roomStates] = await Promise.all([
     supabaseGet<ReservationRow>('reservations', {
-      select: 'id,folio,guest_name,guest_phone,guest_email,room_type,rooms,room,check_in,check_out,nights,total_mxn,status,checkin_at,checkout_at,source,paid_at,checkin_code,late_checkout_until,damage_consent_at,id_photo_path,signature_path',
+      select: 'id,folio,guest_name,guest_phone,guest_email,room_type,rooms,adults,children,room,check_in,check_out,nights,total_mxn,occupancy,status,checkin_at,checkout_at,source,paid_at,checkin_code,late_checkout_until,damage_consent_at,id_photo_path,signature_path',
       check_in: `eq.${today}`,
       status: 'in.(confirmed,pending_payment)',
       order: 'guest_name.asc',
     }),
     supabaseGet<ReservationRow>('reservations', {
-      select: 'id,folio,guest_name,guest_phone,guest_email,room_type,rooms,room,check_in,check_out,nights,total_mxn,status,checkin_at,checkout_at,source,paid_at,checkin_code,late_checkout_until,damage_consent_at,id_photo_path,signature_path',
+      select: 'id,folio,guest_name,guest_phone,guest_email,room_type,rooms,adults,children,room,check_in,check_out,nights,total_mxn,occupancy,status,checkin_at,checkout_at,source,paid_at,checkin_code,late_checkout_until,damage_consent_at,id_photo_path,signature_path',
       check_out: `eq.${today}`,
       status: 'in.(confirmed,checked_out)',
       order: 'guest_name.asc',
@@ -86,8 +86,10 @@ export async function GET(req: NextRequest) {
     limit: '50',
   }).catch(() => [] as { rooms: number | null }[]);
   const occupied = tonight.reduce((s, r) => s + Math.max(r.rooms ?? 1, 1), 0);
-  const TOTAL_ROOMS = 3;
-  const occupancyPct = Math.min(100, Math.round((occupied / TOTAL_ROOMS) * 100));
+  // Aforo = cuartos registrados en la app (cero hardcode); 3 solo como red de
+  // seguridad si la lista viniera vacía.
+  const totalRooms = Math.max(roomStates.length, 3);
+  const occupancyPct = Math.min(100, Math.round((occupied / totalRooms) * 100));
 
   const weekRevenue = weekRows.reduce((s, r) => s + (r.total_mxn ?? 0), 0);
 

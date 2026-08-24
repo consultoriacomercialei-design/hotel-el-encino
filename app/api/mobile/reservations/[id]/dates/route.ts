@@ -4,8 +4,16 @@ import { supabaseGet, supabasePatch } from '@/app/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
-const TOTAL_ROOMS = 3;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Aforo real: cuartos registrados en la app (cero hardcode; 3 = red de seguridad). */
+async function totalRoomCount(): Promise<number> {
+  const rows = await supabaseGet<{ room: string }>('hotel_rooms_state', {
+    select: 'room',
+    limit: '50',
+  }).catch(() => [] as { room: string }[]);
+  return Math.max(rows.length, 3);
+}
 
 interface LineItem { amount_mxn?: number }
 
@@ -62,7 +70,7 @@ export async function PATCH(
     );
   }
   const occupied = overlapping.reduce((s, o) => s + Math.max(o.rooms ?? 1, 1), 0);
-  if (occupied + Math.max(r.rooms ?? 1, 1) > TOTAL_ROOMS) {
+  if (occupied + Math.max(r.rooms ?? 1, 1) > await totalRoomCount()) {
     return NextResponse.json(
       { success: false, error: 'El hotel está lleno en esas fechas' },
       { status: 409 }

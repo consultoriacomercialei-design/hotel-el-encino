@@ -24,16 +24,30 @@ export async function PATCH(
 
   const { id } = await params;
   const body = (await req.json().catch(() => ({}))) as {
+    /** Distribución POR habitación (pedido del dueño): [{adults, children}]. */
+    occupancy?: Array<{ adults?: number; children?: number }>;
     adults?: number; children?: number; rooms?: number;
   };
-  const adults = Math.floor(Number(body.adults));
-  const children = Math.floor(Number(body.children ?? 0));
-  const rooms = Math.floor(Number(body.rooms));
-  if (!Number.isFinite(adults) || adults < 1 || adults > 50 ||
-      !Number.isFinite(children) || children < 0 || children > 50 ||
-      !Number.isFinite(rooms) || rooms < 1 || rooms > 20) {
+
+  // Normalizar: la app manda la distribución por habitación; los campos planos
+  // quedan como fallback de compatibilidad (una sola "habitación" global).
+  const breakdown = (Array.isArray(body.occupancy) && body.occupancy.length > 0
+    ? body.occupancy
+    : [{ adults: body.adults, children: body.children ?? 0 }]
+  ).map((o) => ({
+    adults: Math.floor(Number(o.adults)),
+    children: Math.floor(Number(o.children ?? 0)),
+  }));
+  if (breakdown.length > 20 ||
+      breakdown.some((o) => !Number.isFinite(o.adults) || o.adults < 1 || o.adults > 20 ||
+                            !Number.isFinite(o.children) || o.children < 0 || o.children > 20)) {
     return NextResponse.json({ success: false, error: 'Personas/habitaciones inválidas' }, { status: 400 });
   }
+  const rooms = Array.isArray(body.occupancy) && body.occupancy.length > 0
+    ? breakdown.length
+    : Math.max(Math.floor(Number(body.rooms)) || 1, 1);
+  const adults = breakdown.reduce((s, o) => s + o.adults, 0);
+  const children = breakdown.reduce((s, o) => s + o.children, 0);
 
   const rows = await supabaseGet<{
     id: string; folio: string | null; status: string; room: string | null;
@@ -57,11 +71,11 @@ export async function PATCH(
   const maxOcc = Math.max(baseOcc, prices.max_occupancy ?? 4);
   const extraRate = Math.max(0, prices.extra_adult ?? 0);
 
-  const people = adults + children;
-  if (people > maxOcc * rooms) {
-    const needed = Math.ceil(people / maxOcc);
+  // Tope POR habitación (la distribución es real, no un promedio).
+  const overCap = breakdown.findIndex((o) => o.adults + o.children > maxOcc);
+  if (overCap >= 0) {
     return NextResponse.json(
-      { success: false, error: `${people} personas no caben en ${rooms} habitación(es) (máx. ${maxOcc} por habitación). Necesitas ${needed}.` },
+      { success: false, error: `La habitación ${overCap + 1} tiene ${breakdown[overCap].adults + breakdown[overCap].children} personas (máx. ${maxOcc} por habitación)` },
       { status: 400 }
     );
   }
@@ -97,7 +111,9 @@ export async function PATCH(
   const base = Math.max((r.total_mxn ?? 0) - oldSurcharge - extras, 0);
   const nightlyPerRoom = base / (oldRooms * nights);
 
-  const extraAdults = Math.max(0, adults - baseOcc * rooms);
+  // Adultos extra HABITACIÓN POR HABITACIÓN (regla del dueño: el 3er adulto
+  // de UNA habitación paga, aunque otra vaya vacía).
+  const extraAdults = breakdown.reduce((s, o) => s + Math.max(0, o.adults - baseOcc), 0);
   const newSurcharge = extraAdults * extraRate * nights;
   const newTotal = Math.round(nightlyPerRoom * rooms * nights + newSurcharge + extras);
 
@@ -105,6 +121,7 @@ export async function PATCH(
     adults,
     children,
     rooms,
+    occupancy: breakdown,
     occupancy_surcharge_mxn: newSurcharge,
     total_mxn: newTotal,
     edited_at: new Date().toISOString(),

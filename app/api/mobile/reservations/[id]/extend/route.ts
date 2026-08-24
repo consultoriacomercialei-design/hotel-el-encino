@@ -4,7 +4,7 @@ import { supabaseGet, supabasePatch } from '@/app/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
-const TOTAL_ROOMS = 3;
+
 
 // POST /api/mobile/reservations/[id]/extend — NOCHE EXTRA (upsell b2).
 // Regla del dueño: solo si el cuarto NO está rematado — se valida contra las
@@ -55,7 +55,8 @@ export async function POST(
     );
   }
   const occupied = overlapping.reduce((s, o) => s + Math.max(o.rooms ?? 1, 1), 0);
-  if (occupied >= TOTAL_ROOMS) {
+  const roomList = await supabaseGet<{ room: string }>('hotel_rooms_state', { select: 'room', limit: '50' }).catch(() => [] as { room: string }[]);
+  if (occupied >= Math.max(roomList.length, 3)) {
     return NextResponse.json(
       { success: false, error: 'El hotel está lleno esas noches' },
       { status: 409 }

@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   const [reservations, rooms] = await Promise.all([
     supabaseGet<Record<string, unknown>>('reservations', {
       select:
-        'id,folio,guest_name,guest_phone,room_type,rooms,room,check_in,check_out,nights,total_mxn,status,checkin_at,checkout_at,source,paid_at,checkin_code,late_checkout_until',
+        'id,folio,guest_name,guest_phone,room_type,rooms,adults,children,room,check_in,check_out,nights,total_mxn,occupancy,status,checkin_at,checkout_at,source,paid_at,checkin_code,late_checkout_until',
       check_in: `lte.${to}`,
       check_out: `gte.${from}`,
       status: statusFilter,
