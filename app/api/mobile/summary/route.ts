@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
   const today = mtyDate();
   const weekEnd = mtyDate(7);
 
-  const [arrivals, departures, weekRows, openRequests, pendingPay] = await Promise.all([
+  const [arrivals, departures, weekRows, openRequests, pendingPay, roomStates] = await Promise.all([
     supabaseGet<ReservationRow>('reservations', {
       select: 'id,folio,guest_name,guest_phone,guest_email,room_type,rooms,room,check_in,check_out,nights,total_mxn,status,checkin_at,checkout_at,source,checkin_code,late_checkout_until,damage_consent_at,id_photo_path,signature_path',
       check_in: `eq.${today}`,
@@ -68,6 +68,11 @@ export async function GET(req: NextRequest) {
       check_in: `gte.${today}`,
       limit: '50',
     }),
+    // b10: cuartos por limpiar — tarjeta clickeable en Hoy.
+    supabaseGet<{ room: string; state: string }>('hotel_rooms_state', {
+      select: 'room,state',
+      limit: '50',
+    }).catch(() => [] as { room: string; state: string }[]),
   ]);
 
   // Ocupación de ESTA noche (b9, widget): cuartos con reserva viva que cubre hoy.
@@ -94,6 +99,7 @@ export async function GET(req: NextRequest) {
       open_requests: openRequests.length,
       pending_payments: pendingPay.length,
       occupancy_pct: occupancyPct,
+      rooms_to_clean: roomStates.filter((r) => r.state === 'dirty').map((r) => r.room),
     },
   });
 }

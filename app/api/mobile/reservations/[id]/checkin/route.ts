@@ -25,6 +25,8 @@ interface Body {
   id_photo_back_b64?: string;  // JPEG base64 (reverso)
   signature_b64?: string;      // PNG base64 (firma)
   damage_consent?: boolean;
+  /** b10: el staff confirmó asignar un cuarto que está POR LIMPIAR. */
+  force_dirty?: boolean;
 }
 
 async function uploadB64(path: string, b64: string, contentType: string): Promise<string | null> {
@@ -76,7 +78,28 @@ export async function POST(
   const ts = Date.now();
 
   const room = (body.room ?? '').trim().slice(0, 20);
-  if (room) patch.room = room;
+  // b10: validar estado del cuarto — bloqueado JAMÁS; sucio solo con confirmación.
+  if (room) {
+    const states = await supabaseGet<{ state: string; note: string | null }>('hotel_rooms_state', {
+      select: 'state,note',
+      room: `eq.${room}`,
+      limit: '1',
+    }).catch(() => [] as { state: string; note: string | null }[]);
+    const st = states[0]?.state;
+    if (st === 'blocked') {
+      return NextResponse.json(
+        { success: false, error: `El cuarto ${room} está bloqueado${states[0]?.note ? ` (${states[0].note})` : ''}` },
+        { status: 409 }
+      );
+    }
+    if (st === 'dirty' && body.force_dirty !== true) {
+      return NextResponse.json(
+        { success: false, error: `El cuarto ${room} está por limpiar` },
+        { status: 409 }
+      );
+    }
+    patch.room = room;
+  }
   if (body.guest_phone?.trim()) patch.guest_phone = body.guest_phone.trim().slice(0, 30);
   if (body.guest_email?.trim()) patch.guest_email = body.guest_email.trim().slice(0, 120);
   if (body.id_type?.trim()) patch.id_type = body.id_type.trim().slice(0, 30);
