@@ -506,6 +506,45 @@ function cancelDetailsHtml(payload: ReservationPayload, folio: string, room: str
     </div>`;
 }
 
+/**
+ * b13: aviso al huésped de que SU reservación fue actualizada por el hotel
+ * (fechas u ocupación). Queda en email_log con tracking de entrega/apertura
+ * (webhooks de Resend) — el staff puede VER si le llegó desde la app.
+ */
+export async function sendReservationUpdatedEmail(input: {
+  reservationId: string;
+  folio: string;
+  guestName: string;
+  guestEmail: string;
+  /** Líneas ya redactadas: "Fechas: 26–28 sep (2 noches)", "Total: $15,000 MXN"… */
+  lines: string[];
+}) {
+  const subject = `Tu reservación se actualizó — Hotel El Encino · ${input.folio}`;
+  const result = await sendEmail({
+    from: FROM,
+    to: [input.guestEmail],
+    subject,
+    html: `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#fafaf8;border-radius:16px">
+        <h2 style="font-size:1.3rem;color:#040404;margin-bottom:8px">Tu reservación se actualizó</h2>
+        <p style="color:#4a4a4a;margin-bottom:20px">Hola <strong>${input.guestName}</strong>, el hotel ajustó tu reservación <strong>${input.folio}</strong>. Así queda:</p>
+        <div style="background:#fff;border:1px solid #eee;border-radius:12px;padding:16px 18px;margin-bottom:20px">
+          ${input.lines.map((l) => `<p style="margin:4px 0;color:#222;font-size:0.95rem">${l}</p>`).join('')}
+        </div>
+        <p style="color:#4a4a4a;font-size:0.88rem">¿Algo no cuadra? Respóndenos este correo o escríbenos por WhatsApp y lo revisamos.</p>
+        <a href="https://wa.me/528123816588" style="display:inline-block;margin-top:8px;padding:9px 20px;background:#25D366;color:#fff;text-decoration:none;border-radius:980px;font-size:0.82rem">WhatsApp</a>
+        <p style="color:#aaa;font-size:0.78rem;margin-top:20px">📍 Hermenegildo Galeana 200, Santiago, N.L.</p>
+      </div>`,
+  });
+  logEmailSent({
+    reservation_id: input.reservationId,
+    email_type: 'updated',
+    recipient_email: input.guestEmail,
+    subject,
+    resend_id: result.id,
+  });
+}
+
 // Motivo: no confirmó en 2 horas (timeout WhatsApp / sin pago)
 export async function sendCancelledTimeoutEmail(payload: ReservationPayload, folio: string) {
   const room = ROOM_LABELS[payload.room_type] || payload.room_type;

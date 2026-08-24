@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireHotelStaff } from '@/app/lib/mobile-auth';
 import { supabaseGet, supabasePatch } from '@/app/lib/supabase';
+import { sendReservationUpdatedEmail } from '@/app/lib/emails';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,8 +44,9 @@ export async function PATCH(
     id: string; status: string; room: string | null; rooms: number | null;
     check_in: string; check_out: string; nights: number | null;
     total_mxn: number | null; line_items: LineItem[] | null;
+    folio: string | null; guest_name: string; guest_email: string | null;
   }>('reservations', {
-    select: 'id,status,room,rooms,check_in,check_out,nights,total_mxn,line_items',
+    select: 'id,status,room,rooms,check_in,check_out,nights,total_mxn,line_items,folio,guest_name,guest_email',
     id: `eq.${id}`,
     limit: '1',
   });
@@ -94,6 +96,20 @@ export async function PATCH(
     edited_by: staff.full_name,
   });
   if (!ok) return NextResponse.json({ success: false, error: 'No se pudo guardar' }, { status: 500 });
+
+  // b13: avisar al huésped del cambio (queda en email_log con tracking).
+  if (r.guest_email) {
+    sendReservationUpdatedEmail({
+      reservationId: r.id,
+      folio: r.folio ?? '',
+      guestName: r.guest_name,
+      guestEmail: r.guest_email,
+      lines: [
+        `📅 Nuevas fechas: llegada <strong>${checkIn}</strong> · salida <strong>${checkOut}</strong> (${nights} noche${nights === 1 ? '' : 's'})`,
+        `💰 Total: <strong>$${newTotal.toLocaleString('es-MX')} MXN</strong>`,
+      ],
+    }).catch((e: unknown) => console.error('[dates] update email failed', e));
+  }
 
   return NextResponse.json({
     success: true,

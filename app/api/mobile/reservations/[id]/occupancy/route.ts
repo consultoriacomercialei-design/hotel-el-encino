@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireHotelStaff } from '@/app/lib/mobile-auth';
 import { supabaseGet, supabasePatch } from '@/app/lib/supabase';
+import { sendReservationUpdatedEmail } from '@/app/lib/emails';
 import { fetchRoomPrices } from '@/app/lib/hotel-config';
 
 export const dynamic = 'force-dynamic';
@@ -54,8 +55,9 @@ export async function PATCH(
     check_in: string; check_out: string; nights: number | null;
     rooms: number | null; total_mxn: number | null;
     occupancy_surcharge_mxn: number | null; line_items: LineItem[] | null;
+    guest_name: string; guest_email: string | null;
   }>('reservations', {
-    select: 'id,folio,status,room,check_in,check_out,nights,rooms,total_mxn,occupancy_surcharge_mxn,line_items',
+    select: 'id,folio,status,room,check_in,check_out,nights,rooms,total_mxn,occupancy_surcharge_mxn,line_items,guest_name,guest_email',
     id: `eq.${id}`,
     limit: '1',
   });
@@ -128,6 +130,24 @@ export async function PATCH(
     edited_by: staff.full_name,
   });
   if (!ok) return NextResponse.json({ success: false, error: 'No se pudo guardar' }, { status: 500 });
+
+  // b13: avisar al huésped del cambio (queda en email_log con tracking).
+  if (r.guest_email) {
+    const roomsLine = breakdown
+      .map((o, i) => `Hab. ${i + 1}: ${o.adults} adulto(s)${o.children > 0 ? ` + ${o.children} niño(s)` : ''}`)
+      .join(' · ');
+    sendReservationUpdatedEmail({
+      reservationId: r.id,
+      folio: r.folio ?? '',
+      guestName: r.guest_name,
+      guestEmail: r.guest_email,
+      lines: [
+        `🛏️ <strong>${rooms} habitación${rooms === 1 ? '' : 'es'}</strong> · ${adults} adulto(s)${children > 0 ? ` y ${children} niño(s)` : ''}`,
+        roomsLine,
+        `💰 Total: <strong>$${newTotal.toLocaleString('es-MX')} MXN</strong>`,
+      ],
+    }).catch((e: unknown) => console.error('[occupancy] update email failed', e));
+  }
 
   return NextResponse.json({
     success: true,

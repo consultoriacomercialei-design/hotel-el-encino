@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
   const today = mtyDate();
   const weekEnd = mtyDate(7);
 
-  const [arrivals, departures, weekRows, openRequests, pendingPay, roomStates] = await Promise.all([
+  const [arrivals, departures, weekRows, openRequests, pendingPay, roomStates, createdToday] = await Promise.all([
     supabaseGet<ReservationRow>('reservations', {
       select: 'id,folio,guest_name,guest_phone,guest_email,room_type,rooms,adults,children,room,check_in,check_out,nights,total_mxn,occupancy,status,checkin_at,checkout_at,source,paid_at,checkin_code,late_checkout_until,damage_consent_at,id_photo_path,signature_path',
       check_in: `eq.${today}`,
@@ -75,6 +75,14 @@ export async function GET(req: NextRequest) {
       select: 'room,state',
       limit: '50',
     }).catch(() => [] as { room: string; state: string }[]),
+    // b13: reservas CREADAS hoy (para cualquier fecha) — "¿qué pasó HOY?".
+    // Medianoche de Monterrey = 06:00 UTC (NL sin horario de verano desde 2022).
+    supabaseGet<ReservationRow>('reservations', {
+      select: 'id,folio,guest_name,guest_phone,guest_email,room_type,rooms,adults,children,room,check_in,check_out,nights,total_mxn,occupancy,status,checkin_at,checkout_at,source,paid_at,checkin_code,late_checkout_until,damage_consent_at,id_photo_path,signature_path',
+      created_at: `gte.${today}T06:00:00Z`,
+      order: 'created_at.desc',
+      limit: '30',
+    }).catch(() => [] as ReservationRow[]),
   ]);
 
   // Ocupación de ESTA noche (b9, widget): cuartos con reserva viva que cubre hoy.
@@ -95,7 +103,7 @@ export async function GET(req: NextRequest) {
 
   // b11: estado de cuenta por reserva (suma de pagos aprobados, MP + manuales).
   const paidMap = await paidSumsFor(
-    [...arrivals, ...departures].map((r) => ({ id: r.id, total_mxn: r.total_mxn, paid_at: r.paid_at }))
+    [...arrivals, ...departures, ...createdToday].map((r) => ({ id: r.id, total_mxn: r.total_mxn, paid_at: r.paid_at }))
   );
   const withPaid = (r: ReservationRow) => ({ ...r, paid_mxn: paidMap[r.id] ?? 0 });
 
@@ -105,6 +113,7 @@ export async function GET(req: NextRequest) {
       today,
       arrivals: arrivals.map(withPaid),
       departures: departures.map(withPaid),
+      created_today: createdToday.map(withPaid),
       week: { reservations: weekRows.length, revenue_mxn: weekRevenue },
       open_requests: openRequests.length,
       pending_payments: pendingPay.length,
