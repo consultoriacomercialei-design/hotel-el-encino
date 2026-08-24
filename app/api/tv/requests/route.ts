@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabasePost } from '@/app/lib/supabase';
+import { supabaseGet, supabasePost } from '@/app/lib/supabase';
 import { sendHotelPush } from '@/app/lib/apns-hotel';
 import { syncRequestsLiveActivity } from '@/app/lib/requests-live-activity';
 
@@ -76,4 +76,28 @@ ${note ? `<p>Nota del huésped: ${note}</p>` : ''}
   }
 
   return NextResponse.json({ ok: true, id: row.id });
+}
+
+/**
+ * GET /api/tv/requests?room=N — estado real de las solicitudes de ESTA
+ * habitación (últimas 24 h) para que el TV refleje Recibida → En proceso →
+ * Lista en vez de fingir con estado local. Auth x-tv-token.
+ */
+export async function GET(req: NextRequest) {
+  const token = process.env.TV_KIOSK_TOKEN;
+  if (!token || req.headers.get('x-tv-token') !== token) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  }
+  const room = (req.nextUrl.searchParams.get('room') ?? '').trim().slice(0, 20);
+  if (!room) return NextResponse.json({ error: 'Falta room' }, { status: 400 });
+
+  const since = new Date(Date.now() - 24 * 3600_000).toISOString();
+  const rows = await supabaseGet<Record<string, unknown>>('service_requests', {
+    select: 'id,request_type,status,created_at,taken_at,resolved_at',
+    room_number: `eq.${room}`,
+    created_at: `gte.${since}`,
+    order: 'created_at.desc',
+    limit: '20',
+  });
+  return NextResponse.json({ ok: true, requests: rows });
 }
