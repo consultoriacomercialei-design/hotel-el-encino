@@ -80,12 +80,14 @@ export async function PATCH(
   }
 
   // Recalcular: tarifa nocturna base = (total − extras) / noches originales.
+  // La nocturna NO se redondea (tarifas negociadas como $2,119.50 se
+  // preservan al centavo); solo el total final se redondea a centavos.
   const extras = (Array.isArray(r.line_items) ? r.line_items : [])
     .reduce((s, li) => s + (typeof li.amount_mxn === 'number' ? li.amount_mxn : 0), 0);
   const oldNights = r.nights && r.nights > 0 ? r.nights : 1;
   const base = Math.max((r.total_mxn ?? 0) - extras, 0);
-  const nightly = Math.round(base / oldNights);
-  const newTotal = nightly * nights + extras;
+  const nightly = base / oldNights;
+  const newTotal = Math.round((nightly * nights + extras) * 100) / 100;
 
   const ok = await supabasePatch('reservations', id, {
     check_in: checkIn,
@@ -113,6 +115,6 @@ export async function PATCH(
 
   return NextResponse.json({
     success: true,
-    data: { check_in: checkIn, check_out: checkOut, nights, total_mxn: newTotal, nightly_mxn: nightly },
+    data: { check_in: checkIn, check_out: checkOut, nights, total_mxn: newTotal, nightly_mxn: Math.round(nightly * 100) / 100 },
   });
 }
