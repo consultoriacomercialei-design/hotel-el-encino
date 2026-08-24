@@ -31,7 +31,7 @@ async function markDone(formData: FormData) {
   const id = formData.get('id');
   if (typeof id !== 'string' || !id) return;
   await supabasePatch('service_requests', id, {
-    status: 'done', resolved_at: new Date().toISOString(),
+    status: 'resolved', resolved_at: new Date().toISOString(),
   });
   revalidatePath('/admin/solicitudes');
 }
@@ -40,8 +40,8 @@ export default async function SolicitudesPage() {
   const rows = await supabaseGet<ServiceRequest>('service_requests', {
     select: '*', order: 'created_at.desc', limit: '100',
   });
-  const pending = (rows ?? []).filter(r => r.status === 'pending');
-  const done = (rows ?? []).filter(r => r.status === 'done').slice(0, 20);
+  const pending = (rows ?? []).filter(r => r.status === 'pending' || r.status === 'in_progress');
+  const done = (rows ?? []).filter(r => r.status === 'resolved').slice(0, 20);
 
   const fmt = (iso: string) => new Date(iso).toLocaleString('es-MX', {
     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
