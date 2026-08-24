@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireHotelStaff } from '@/app/lib/mobile-auth';
 import { supabasePost, getNextFolio } from '@/app/lib/supabase';
+import { sendHotelPush } from '@/app/lib/apns-hotel';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,5 +49,12 @@ export async function POST(req: NextRequest) {
     notes: (b.notes ?? '').slice(0, 500) || null,
   });
   if (!row) return NextResponse.json({ success: false, error: 'No se pudo crear' }, { status: 500 });
+
+  // b11: aviso push al staff (el que la creó la ignora; los demás se enteran).
+  sendHotelPush({
+    title: `Reserva nueva · ${row.folio}`,
+    body: `${name} · ${nights} noche(s) · $${Math.round(total).toLocaleString('es-MX')} · llega ${checkIn} (creada por ${staff.full_name})`,
+  }).catch(() => undefined);
+
   return NextResponse.json({ success: true, data: { id: row.id, folio: row.folio } });
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireHotelStaff } from '@/app/lib/mobile-auth';
 import { supabaseGet } from '@/app/lib/supabase';
+import { paidSumsFor } from '@/app/lib/payments';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
   const [reservations, rooms] = await Promise.all([
     supabaseGet<Record<string, unknown>>('reservations', {
       select:
-        'id,folio,guest_name,guest_phone,room_type,rooms,room,check_in,check_out,nights,total_mxn,status,checkin_at,checkout_at,source,checkin_code,late_checkout_until',
+        'id,folio,guest_name,guest_phone,room_type,rooms,room,check_in,check_out,nights,total_mxn,status,checkin_at,checkout_at,source,paid_at,checkin_code,late_checkout_until',
       check_in: `lte.${to}`,
       check_out: `gte.${from}`,
       status: statusFilter,
@@ -43,8 +44,18 @@ export async function GET(req: NextRequest) {
     }).catch(() => []),
   ]);
 
+  // b11: estado de cuenta por reserva (MP + pagos manuales).
+  const paidMap = await paidSumsFor(
+    reservations.map((r) => ({
+      id: String(r.id),
+      total_mxn: (r.total_mxn as number | null) ?? null,
+      paid_at: (r.paid_at as string | null) ?? null,
+    }))
+  );
+  const decorated = reservations.map((r) => ({ ...r, paid_mxn: paidMap[String(r.id)] ?? 0 }));
+
   return NextResponse.json({
     success: true,
-    data: { from, to, today: mtyDate(), reservations, rooms },
+    data: { from, to, today: mtyDate(), reservations: decorated, rooms },
   });
 }

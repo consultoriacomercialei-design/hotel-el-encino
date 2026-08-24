@@ -18,6 +18,7 @@ export default function NuevaReservacionPage() {
     adults: '2', children: '0', rooms: '1',
     total_mxn: '', notes: '',
     status: 'confirmed', payment_method: 'pending',
+    pay_kind: 'none', pay_amount: '', pay_method: 'efectivo',
     // Identidad (opcional al crear — se completa en check-in)
     id_type: 'INE', id_number: '', nationality: 'Mexicana',
   });
@@ -78,6 +79,10 @@ export default function NuevaReservacionPage() {
           id_type:        form.id_number ? form.id_type : undefined,
           id_number:      form.id_number || undefined,
           nationality:    form.id_number ? form.nationality : undefined,
+          payment_received: form.pay_kind === 'none' ? undefined : {
+            amount_mxn: form.pay_kind === 'total' ? totalMxn : (parseFloat(form.pay_amount) || 0),
+            method: form.pay_method,
+          },
         });
         router.push('/admin/reservaciones');
       } catch (err: unknown) {
@@ -151,6 +156,27 @@ export default function NuevaReservacionPage() {
               <input type="number" min="0" value={form.total_mxn}
                 onChange={e => set('total_mxn', e.target.value)}
                 placeholder={String(autoTotal)} style={inputStyle} />
+            </Field>
+            <Field label="¿Recibiste pago? (queda registrado en el estado de cuenta)">
+              <div style={{ display: 'grid', gridTemplateColumns: form.pay_kind === 'anticipo' ? '1fr 1fr 1fr' : '1fr 1fr', gap: '12px' }}>
+                <select value={form.pay_kind} onChange={e => set('pay_kind', e.target.value)} style={inputStyle}>
+                  <option value="none">Sin pago todavía</option>
+                  <option value="anticipo">Anticipo</option>
+                  <option value="total">Pagado el total</option>
+                </select>
+                {form.pay_kind === 'anticipo' && (
+                  <input type="number" min="1" placeholder="Monto del anticipo"
+                    value={form.pay_amount} onChange={e => set('pay_amount', e.target.value)}
+                    style={inputStyle} required />
+                )}
+                {form.pay_kind !== 'none' && (
+                  <select value={form.pay_method} onChange={e => set('pay_method', e.target.value)} style={inputStyle}>
+                    <option value="efectivo">Efectivo</option>
+                    <option value="terminal">Tarjeta (terminal)</option>
+                    <option value="transferencia">Transferencia</option>
+                  </select>
+                )}
+              </div>
             </Field>
             <Field label="Notas">
               <textarea value={form.notes} onChange={e => set('notes', e.target.value)}

@@ -10,6 +10,18 @@ import { parseAnticipoFromNotes } from './balance';
 // los correos de confirmación —el cuello por donde pasan todos los flujos— y no
 // en cada sitio. Best-effort: sin código, el correo sale sin botón de Wallet.
 import { ensureCheckinCode } from '@/app/lib/wallet/checkin-code';
+import { sendHotelPush } from '@/app/lib/apns-hotel';
+
+/** b11: push al staff (El Encino Manager) en cada evento de reserva/pago.
+ *  Best-effort y fire-and-forget: jamás frena el correo que lo acompaña. */
+function pushStaff(title: string, body: string): void {
+  sendHotelPush({ title, body }).catch((e: unknown) =>
+    console.error('[emails] push failed', e));
+}
+
+function fmtMoney(n: number | null | undefined): string {
+  return `$${Math.round(n ?? 0).toLocaleString('es-MX')}`;
+}
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 // .trim(): las envs de Vercel a veces llegan con \n colado al final.
@@ -190,6 +202,10 @@ export async function sendConfirmedEmails(
   folio: string
 ) {
   const room = ROOM_LABELS[payload.room_type] || payload.room_type;
+  pushStaff(
+    `Reserva nueva · ${folio}`,
+    `${payload.guest_name} · ${payload.nights} noche(s) · ${fmtMoney(payload.total_mxn)} · llega ${payload.check_in}`
+  );
   const icsContent = generateICS(payload, reservationId, folio);
   const icsBase64 = Buffer.from(icsContent).toString('base64');
   const icsAttachment = { filename: `reservacion-${folio}.ics`, content: icsBase64 };
@@ -493,6 +509,7 @@ function cancelDetailsHtml(payload: ReservationPayload, folio: string, room: str
 // Motivo: no confirmó en 2 horas (timeout WhatsApp / sin pago)
 export async function sendCancelledTimeoutEmail(payload: ReservationPayload, folio: string) {
   const room = ROOM_LABELS[payload.room_type] || payload.room_type;
+  pushStaff(`Reserva cancelada · ${folio}`, `${payload.guest_name} — no confirmó a tiempo`);
   await sendEmail({
     from: FROM, to: [payload.guest_email],
     subject: `Reservación liberada — Hotel El Encino · ${folio}`,
@@ -514,6 +531,7 @@ export async function sendCancelledTimeoutEmail(payload: ReservationPayload, fol
 // Motivo: cliente solicitó cancelación (sin pago previo)
 export async function sendCancelledByRequestEmail(payload: ReservationPayload, folio: string) {
   const room = ROOM_LABELS[payload.room_type] || payload.room_type;
+  pushStaff(`Reserva cancelada · ${folio}`, `${payload.guest_name} — canceló su reservación`);
   await sendEmail({
     from: FROM, to: [payload.guest_email],
     subject: `Reservación cancelada — Hotel El Encino · ${folio}`,
@@ -536,6 +554,7 @@ export async function sendCancelledRefundPendingEmail(
   paymentId?: string
 ) {
   const room = ROOM_LABELS[payload.room_type] || payload.room_type;
+  pushStaff(`Reserva cancelada · ${folio}`, `${payload.guest_name} — pagó en línea, reembolso por autorizar`);
   const referenceBlock = paymentId
     ? `<p style="margin:8px 0 0;color:#6b6b6b;font-size:0.82rem">Número de referencia MP: <strong style="font-family:monospace">${paymentId}</strong></p>`
     : '';
@@ -565,6 +584,7 @@ export async function sendCancelledRefundPendingEmail(
 // Motivo: pago MP iniciado pero no completado (checkout abandonado, link expirado)
 export async function sendCancelledMpIncompleteEmail(payload: ReservationPayload, folio: string) {
   const room = ROOM_LABELS[payload.room_type] || payload.room_type;
+  pushStaff(`Reserva cancelada · ${folio}`, `${payload.guest_name} — pago no completado`);
   await sendEmail({
     from: FROM, to: [payload.guest_email],
     subject: `Pago no completado — Hotel El Encino · ${folio}`,
@@ -593,6 +613,10 @@ export async function sendCancelledMpIncompleteEmail(payload: ReservationPayload
 
 export async function sendPaymentConfirmedEmails(reservation: FullReservation) {
   const room = ROOM_LABELS[reservation.room_type] || reservation.room_type;
+  pushStaff(
+    `Pago recibido · ${reservation.folio}`,
+    `${fmtMoney(reservation.total_mxn)} · ${reservation.guest_name}`
+  );
   const checkinCode =
     reservation.checkin_code ?? (await ensureCheckinCode(reservation.id)) ?? undefined;
   const icsContent = generateICS(reservation, reservation.id, reservation.folio);

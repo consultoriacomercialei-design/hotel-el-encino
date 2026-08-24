@@ -6,6 +6,8 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { supabaseGet } from '@/app/lib/supabase';
 import ReservationDetailActions from './ReservationDetailActions';
+import RegisterPaymentForm from './RegisterPaymentForm';
+import { paidSumsFor } from '@/app/lib/payments';
 import InvoiceSection from './InvoiceSection';
 import { getInvoicesForReservation } from '../../invoice-actions';
 import { isFacturapiConfigured, isTestMode } from '@/app/lib/facturapi';
@@ -137,6 +139,11 @@ export default async function ReservationDetailPage({
 
   const r = rows[0];
   if (!r) notFound();
+
+  // b11: estado de cuenta real (pagos MP + manuales de la tabla payments).
+  const paidMap = await paidSumsFor([{ id: r.id, total_mxn: r.total_mxn, paid_at: r.paid_at ?? null }]);
+  const paidReal = paidMap[r.id] ?? 0;
+  const balanceReal = Math.max((r.total_mxn ?? 0) - paidReal, 0);
 
   const [invoices, blacklistEntry, emailLog, fiscal, checkins] = await Promise.all([
     getInvoicesForReservation(r.id),
@@ -405,6 +412,22 @@ export default async function ReservationDetailPage({
                 <span style={labelStyle}>Método</span>
                 <span style={valueStyle}>{PAYMENT_LABELS[r.payment_method] || r.payment_method || '—'}</span>
               </div>
+              {/* b11: estado de cuenta real desde la tabla payments */}
+              <div style={fieldStyle}>
+                <span style={labelStyle}>Pagado (registrado)</span>
+                <span style={{ ...valueStyle, fontWeight: 700, color: paidReal > 0 ? '#2e7d32' : '#999' }}>
+                  ${fmt(paidReal)} MXN
+                </span>
+              </div>
+              <div style={fieldStyle}>
+                <span style={labelStyle}>Saldo</span>
+                <span style={{ ...valueStyle, fontWeight: 700, color: balanceReal > 0 ? '#f57f17' : '#2e7d32' }}>
+                  {balanceReal > 0 ? `$${fmt(balanceReal)} MXN` : 'Liquidado ✓'}
+                </span>
+              </div>
+              {balanceReal > 0 && ['confirmed', 'pending_payment'].includes(r.status) && (
+                <RegisterPaymentForm id={r.id} balance={balanceReal} />
+              )}
               {anticipo !== null && (
                 <div style={fieldStyle}>
                   <span style={labelStyle}>Anticipo</span>

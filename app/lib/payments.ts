@@ -217,6 +217,109 @@ export async function registerManualPayment(reservationId: string): Promise<void
   }
 }
 
+/**
+ * b11: suma de pagos APROBADOS por reserva (todos los providers). Regla legacy:
+ * si una reserva tiene paid_at pero CERO filas en payments (marcada pagada
+ * antes del rediseño), se considera pagada por el total.
+ */
+export async function paidSumsFor(
+  reservations: Array<{ id: string; total_mxn: number | null; paid_at?: string | null }>
+): Promise<Record<string, number>> {
+  const out: Record<string, number> = {};
+  if (reservations.length === 0) return out;
+  try {
+    const ids = reservations.map((r) => r.id).join(',');
+    const rows = await supabaseGet<{ reservation_id: string | null; amount_mxn: number | null }>('payments', {
+      reservation_id: `in.(${ids})`,
+      status: 'eq.approved',
+      select: 'reservation_id,amount_mxn',
+      limit: '500',
+    });
+    for (const p of rows) {
+      if (!p.reservation_id) continue;
+      out[p.reservation_id] = (out[p.reservation_id] ?? 0) + (p.amount_mxn ?? 0);
+    }
+    for (const r of reservations) {
+      if (out[r.id] === undefined && r.paid_at) out[r.id] = r.total_mxn ?? 0;
+    }
+  } catch (err) {
+    console.error('[PAYMENTS] paidSumsFor failed', err);
+  }
+  return out;
+}
+
+/**
+ * b11: registra un pago manual PARCIAL o total (efectivo/terminal/transferencia)
+ * como fila de primera clase en `payments`. Si con este pago se cubre el total,
+ * la reserva queda con paid_at + payment_method (compatibilidad con todo lo
+ * que ya deriva de ahí). Devuelve el estado de cuenta resultante.
+ */
+export async function recordManualPartialPayment(opts: {
+  reservationId: string;
+  amountMxn: number;
+  method: string;
+  registeredBy: string;
+}): Promise<{ paid: number; total: number; balance: number } | null> {
+  if (!SUPABASE_URL || !SERVICE_KEY) return null;
+  const amount = Math.round(opts.amountMxn * 100) / 100;
+  if (!(amount > 0)) return null;
+  try {
+    const rows = await supabaseGet<FullReservation>('reservations', {
+      id: `eq.${opts.reservationId}`,
+      select: 'id,guest_name,guest_email,guest_phone,room_type,check_in,check_out,nights,total_mxn,adults,children,rooms,notes,folio,status,payment_method,payment_id,paid_at',
+    });
+    if (!rows.length) return null;
+    const r = rows[0];
+
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/payments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SERVICE_KEY,
+        Authorization: `Bearer ${SERVICE_KEY}`,
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({
+        provider: 'manual',
+        payment_id: `manual-${opts.reservationId}-${Date.now()}`,
+        reservation_id: opts.reservationId,
+        folio: r.folio,
+        status: 'approved',
+        amount_mxn: amount,
+        payer_name: r.guest_name,
+        method: opts.method,
+        raw: { registered_by: opts.registeredBy, kind: 'manual_partial' },
+        updated_at: new Date().toISOString(),
+      }),
+    });
+    if (!res.ok) {
+      console.error('[PAYMENTS] recordManualPartialPayment insert error', res.status, await res.text());
+      return null;
+    }
+
+    const sums = await paidSumsFor([{ id: r.id, total_mxn: r.total_mxn, paid_at: r.paid_at }]);
+    const total = r.total_mxn ?? 0;
+    const paid = sums[r.id] ?? amount;
+    if (paid >= total && !r.paid_at) {
+      await supabasePatch('reservations', r.id, {
+        paid_at: new Date().toISOString(),
+        payment_method: opts.method,
+      });
+    }
+    logAuditEvent({
+      event: 'payment.manual_partial',
+      status: 'ok',
+      reservation_id: r.id,
+      folio: r.folio,
+      details: { amount, method: opts.method, registered_by: opts.registeredBy, paid, total },
+    });
+    return { paid, total, balance: Math.max(total - paid, 0) };
+  } catch (err) {
+    console.error('[PAYMENTS] recordManualPartialPayment failed', err);
+    return null;
+  }
+}
+
 /** Último intento de pago registrado de una reserva (para la página del huésped). */
 export async function lastPaymentFor(reservationId: string): Promise<{ status: string; status_detail: string | null } | null> {
   const rows = await supabaseGet<{ status: string; status_detail: string | null }>('payments', {

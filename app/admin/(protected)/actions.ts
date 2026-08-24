@@ -17,7 +17,7 @@ import {
   type ReservationPayload, type FullReservation, type LineItem,
 } from '@/app/lib/emails';
 import { propagateDirectorioCancel } from '@/app/lib/directorio-cancel';
-import { registerManualPayment } from '@/app/lib/payments';
+import { registerManualPayment, recordManualPartialPayment, paidSumsFor } from '@/app/lib/payments';
 
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
 
@@ -50,6 +50,8 @@ export async function createReservationAction(data: {
   notify?: boolean;
   // Identidad del huésped (opcional en creación, se completa en check-in)
   id_type?: string; id_number?: string; nationality?: string; date_of_birth?: string;
+  /** b11: pago recibido al momento del alta (anticipo o total). */
+  payment_received?: { amount_mxn: number; method: string };
 }) {
   await requireAuth();
 
@@ -73,8 +75,8 @@ export async function createReservationAction(data: {
 
   const folio = await getNextFolio();
 
-  // Destructure 'notify' out — it's a UI flag, NOT a DB column
-  const { notify, ...dbData } = data;
+  // Destructure 'notify' y 'payment_received' — flags de UI, NO columnas.
+  const { notify, payment_received, ...dbData } = data;
 
   // Filter out optional identity fields if empty — let DB defaults apply
   const cleanDbData = Object.fromEntries(
@@ -111,6 +113,17 @@ export async function createReservationAction(data: {
     } catch (err) {
       console.error('[ADMIN/CREATE] calendar/email error (reservación guardada, pero envío falló):', err);
     }
+  }
+
+  // b11: registrar el pago recibido (anticipo/total) como fila en `payments`.
+  if (record?.id && payment_received && Number(payment_received.amount_mxn) > 0 &&
+      ['efectivo', 'terminal', 'transferencia'].includes(payment_received.method)) {
+    await recordManualPartialPayment({
+      reservationId: record.id,
+      amountMxn: Number(payment_received.amount_mxn),
+      method: payment_received.method,
+      registeredBy: 'admin-web',
+    });
   }
 
   return { success: true, folio, reservation_id: reservationId };
@@ -475,6 +488,45 @@ export interface EditReservationData {
 
 const VALID_ROOM_TYPES = ['suite', 'doble', 'grupal'] as const;
 const VALID_PAYMENT_METHODS = ['online', 'pending', 'cash', 'transfer', 'card'] as const;
+
+/** b11: registrar pago manual (anticipo o total) desde el detalle del admin. */
+export async function registerPartialPaymentAction(
+  id: string,
+  amountMxn: number,
+  method: string
+): Promise<{ ok: boolean; paid?: number; balance?: number; error?: string }> {
+  await requireAuth();
+  if (!id || !(Number(amountMxn) > 0)) return { ok: false, error: 'Monto inválido' };
+  if (!['efectivo', 'terminal', 'transferencia'].includes(method)) {
+    return { ok: false, error: 'Método inválido' };
+  }
+  const result = await recordManualPartialPayment({
+    reservationId: id,
+    amountMxn: Number(amountMxn),
+    method,
+    registeredBy: 'admin-web',
+  });
+  if (!result) return { ok: false, error: 'No se pudo registrar el pago' };
+  return { ok: true, paid: result.paid, balance: result.balance };
+}
+
+/** b11: estado de cuenta de una reserva (pagado vs total) para el detalle. */
+export async function paymentSummaryAction(
+  id: string
+): Promise<{ paid: number; total: number; balance: number } | null> {
+  await requireAuth();
+  const rows = await supabaseGet<{ id: string; total_mxn: number | null; paid_at: string | null }>('reservations', {
+    id: `eq.${id}`,
+    select: 'id,total_mxn,paid_at',
+    limit: '1',
+  }, true);
+  if (!rows.length) return null;
+  const r = rows[0];
+  const sums = await paidSumsFor([r]);
+  const paid = sums[r.id] ?? 0;
+  const total = r.total_mxn ?? 0;
+  return { paid, total, balance: Math.max(total - paid, 0) };
+}
 
 export async function editReservationAction(
   id: string,

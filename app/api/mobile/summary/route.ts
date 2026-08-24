@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireHotelStaff } from '@/app/lib/mobile-auth';
 import { supabaseGet } from '@/app/lib/supabase';
+import { paidSumsFor } from '@/app/lib/payments';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,7 @@ interface ReservationRow {
   checkin_code: string | null;
   checkout_at: string | null;
   source: string | null;
+  paid_at: string | null;
 }
 
 /** Fecha local del hotel (America/Monterrey) en YYYY-MM-DD. */
@@ -39,13 +41,13 @@ export async function GET(req: NextRequest) {
 
   const [arrivals, departures, weekRows, openRequests, pendingPay, roomStates] = await Promise.all([
     supabaseGet<ReservationRow>('reservations', {
-      select: 'id,folio,guest_name,guest_phone,guest_email,room_type,rooms,room,check_in,check_out,nights,total_mxn,status,checkin_at,checkout_at,source,checkin_code,late_checkout_until,damage_consent_at,id_photo_path,signature_path',
+      select: 'id,folio,guest_name,guest_phone,guest_email,room_type,rooms,room,check_in,check_out,nights,total_mxn,status,checkin_at,checkout_at,source,paid_at,checkin_code,late_checkout_until,damage_consent_at,id_photo_path,signature_path',
       check_in: `eq.${today}`,
       status: 'in.(confirmed,pending_payment)',
       order: 'guest_name.asc',
     }),
     supabaseGet<ReservationRow>('reservations', {
-      select: 'id,folio,guest_name,guest_phone,guest_email,room_type,rooms,room,check_in,check_out,nights,total_mxn,status,checkin_at,checkout_at,source,checkin_code,late_checkout_until,damage_consent_at,id_photo_path,signature_path',
+      select: 'id,folio,guest_name,guest_phone,guest_email,room_type,rooms,room,check_in,check_out,nights,total_mxn,status,checkin_at,checkout_at,source,paid_at,checkin_code,late_checkout_until,damage_consent_at,id_photo_path,signature_path',
       check_out: `eq.${today}`,
       status: 'in.(confirmed,checked_out)',
       order: 'guest_name.asc',
@@ -89,12 +91,18 @@ export async function GET(req: NextRequest) {
 
   const weekRevenue = weekRows.reduce((s, r) => s + (r.total_mxn ?? 0), 0);
 
+  // b11: estado de cuenta por reserva (suma de pagos aprobados, MP + manuales).
+  const paidMap = await paidSumsFor(
+    [...arrivals, ...departures].map((r) => ({ id: r.id, total_mxn: r.total_mxn, paid_at: r.paid_at }))
+  );
+  const withPaid = (r: ReservationRow) => ({ ...r, paid_mxn: paidMap[r.id] ?? 0 });
+
   return NextResponse.json({
     success: true,
     data: {
       today,
-      arrivals,
-      departures,
+      arrivals: arrivals.map(withPaid),
+      departures: departures.map(withPaid),
       week: { reservations: weekRows.length, revenue_mxn: weekRevenue },
       open_requests: openRequests.length,
       pending_payments: pendingPay.length,

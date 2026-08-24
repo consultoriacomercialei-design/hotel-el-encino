@@ -8,6 +8,7 @@ import { verifyAdminToken } from '@/app/lib/admin-auth';
 import { supabaseGet, supabasePost, getNextFolio } from '@/app/lib/supabase';
 import { createCalendarEvent, type CalendarPayload } from '@/app/lib/google-calendar';
 import { sendConfirmedEmails, sendReminderEmails, type ReservationPayload } from '@/app/lib/emails';
+import { recordManualPartialPayment } from '@/app/lib/payments';
 import { limiters, getClientIP, tooManyRequests } from '@/app/lib/rate-limit';
 import { sanitizeString, isValidEmail, isValidDate } from '@/app/lib/sanitize';
 
@@ -199,6 +200,21 @@ export async function POST(req: NextRequest) {
       createCalendarEvent(calPayload, folio, '2'),
       sendConfirmedEmails(body, reservationId, folio),
     ]);
+  }
+
+  // b11: pago recibido al momento del alta (anticipo o total) — queda como
+  // fila de primera clase en `payments`, no como nota perdida.
+  const pay = (body as {
+    payment_received?: { amount_mxn?: number; method?: string };
+  }).payment_received;
+  if (record?.id && pay && Number(pay.amount_mxn) > 0 &&
+      ['efectivo', 'terminal', 'transferencia'].includes(pay.method ?? '')) {
+    await recordManualPartialPayment({
+      reservationId: record.id,
+      amountMxn: Number(pay.amount_mxn),
+      method: pay.method!,
+      registeredBy: 'admin-web',
+    });
   }
 
   console.log(`[ADMIN/RESERVATIONS] Created ${folio} — ${status}`);
