@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireHotelStaff } from '@/app/lib/mobile-auth';
 import { supabaseGet, supabasePatch } from '@/app/lib/supabase';
+import { syncRequestsLiveActivity } from '@/app/lib/requests-live-activity';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +36,10 @@ export async function PATCH(
 
   const updated = await supabasePatch('service_requests', id, patch);
   if (!updated) return NextResponse.json({ success: false, error: 'No encontrado' }, { status: 404 });
+
+  // Reconciliar la Live Activity (avanza a la siguiente request o termina).
+  syncRequestsLiveActivity().catch((e: unknown) =>
+    console.error('[mobile/requests] live activity failed', e));
 
   const rows = await supabaseGet<Record<string, unknown>>('service_requests', {
     select: 'id,room_number,request_type,note,status,created_at,taken_at,resolved_at',

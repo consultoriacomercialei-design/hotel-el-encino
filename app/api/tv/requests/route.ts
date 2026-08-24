@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabasePost } from '@/app/lib/supabase';
 import { sendHotelPush } from '@/app/lib/apns-hotel';
+import { syncRequestsLiveActivity } from '@/app/lib/requests-live-activity';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,6 +50,10 @@ export async function POST(req: NextRequest) {
     body: TYPE_LABEL[type] + (note ? ` — ${note.slice(0, 80)}` : ''),
     url: `encino://request/${row.id}`,
   }).catch((e: unknown) => console.error('[tv/requests] push failed', e));
+
+  // Live Activity en los iPhone del staff (b9) — best-effort.
+  syncRequestsLiveActivity(true).catch((e: unknown) =>
+    console.error('[tv/requests] live activity failed', e));
 
   // Aviso interno best-effort (fetch crudo a Resend, mismo patrón que emails.ts):
   // la solicitud ya quedó en el admin aunque el correo falle.

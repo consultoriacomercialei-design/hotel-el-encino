@@ -45,15 +45,16 @@ function sendOne(
   jwt: string,
   bundleId: string,
   deviceToken: string,
-  body: string
+  body: string,
+  headers?: { topic?: string; pushType?: string }
 ): Promise<{ status: number; reason: string }> {
   return new Promise((resolve) => {
     const req = session.request({
       ':method': 'POST',
       ':path': `/3/device/${deviceToken}`,
       authorization: `bearer ${jwt}`,
-      'apns-topic': bundleId,
-      'apns-push-type': 'alert',
+      'apns-topic': headers?.topic ?? bundleId,
+      'apns-push-type': headers?.pushType ?? 'alert',
       'apns-priority': '10',
       'content-type': 'application/json',
     });
@@ -81,6 +82,58 @@ async function deleteDeadToken(token: string): Promise<void> {
     method: 'DELETE',
     headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, Prefer: 'return=minimal' },
   }).catch(() => undefined);
+}
+
+/**
+ * Push de Live Activity (ActivityKit). `token` es el push-to-start token
+ * (event=start) o el token de la activity viva (update/end). Devuelve si el
+ * token murió (410/BadDeviceToken) para que el caller lo borre de su tabla.
+ */
+export async function sendLiveActivityEvent(opts: {
+  token: string;
+  event: 'start' | 'update' | 'end';
+  contentState: Record<string, unknown>;
+  /** Solo para start: nombre EXACTO del struct ActivityAttributes en iOS. */
+  attributesType?: string;
+  attributes?: Record<string, unknown>;
+  alert?: { title: string; body: string; sound?: string };
+}): Promise<{ ok: boolean; dead: boolean }> {
+  const env = apnsEnv();
+  if (!env) return { ok: false, dead: false };
+
+  const aps: Record<string, unknown> = {
+    timestamp: Math.floor(Date.now() / 1000),
+    event: opts.event,
+    'content-state': opts.contentState,
+  };
+  if (opts.event === 'start') {
+    aps['attributes-type'] = opts.attributesType;
+    aps.attributes = opts.attributes ?? {};
+  }
+  if (opts.event === 'end') {
+    aps['dismissal-date'] = Math.floor(Date.now() / 1000) + 30;
+  }
+  if (opts.alert) {
+    aps.alert = { title: opts.alert.title, body: opts.alert.body };
+    aps.sound = opts.alert.sound ?? 'default';
+  }
+
+  const jwt = providerJwt(env);
+  const session = http2.connect(APNS_HOST);
+  session.on('error', (err) => console.error('[apns-hotel] la session error', err));
+  try {
+    const result = await sendOne(session, jwt, env.bundleId, opts.token, JSON.stringify({ aps }), {
+      topic: `${env.bundleId}.push-type.liveactivity`,
+      pushType: 'liveactivity',
+    });
+    const dead = result.status === 410 || (result.status === 400 && result.reason === 'BadDeviceToken');
+    if (result.status !== 200 && !dead) {
+      console.error(`[apns-hotel] liveactivity ${opts.event} failed ${result.status} ${result.reason}`);
+    }
+    return { ok: result.status === 200, dead };
+  } finally {
+    session.close();
+  }
 }
 
 /** Push a TODOS los dispositivos del staff del hotel. Devuelve enviados. */
