@@ -70,6 +70,18 @@ export async function GET(req: NextRequest) {
     }),
   ]);
 
+  // Ocupación de ESTA noche (b9, widget): cuartos con reserva viva que cubre hoy.
+  const tonight = await supabaseGet<{ rooms: number | null }>('reservations', {
+    select: 'rooms',
+    status: 'in.(confirmed,pending_payment)',
+    check_in: `lte.${today}`,
+    check_out: `gt.${today}`,
+    limit: '50',
+  }).catch(() => [] as { rooms: number | null }[]);
+  const occupied = tonight.reduce((s, r) => s + Math.max(r.rooms ?? 1, 1), 0);
+  const TOTAL_ROOMS = 3;
+  const occupancyPct = Math.min(100, Math.round((occupied / TOTAL_ROOMS) * 100));
+
   const weekRevenue = weekRows.reduce((s, r) => s + (r.total_mxn ?? 0), 0);
 
   return NextResponse.json({
@@ -81,6 +93,7 @@ export async function GET(req: NextRequest) {
       week: { reservations: weekRows.length, revenue_mxn: weekRevenue },
       open_requests: openRequests.length,
       pending_payments: pendingPay.length,
+      occupancy_pct: occupancyPct,
     },
   });
 }
