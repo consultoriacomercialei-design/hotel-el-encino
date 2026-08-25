@@ -35,6 +35,8 @@ export async function POST(req: NextRequest) {
         rooms_left: roomsLeft,
         fits: occupancy.length <= roomsLeft,
         free_rooms: availability.freeRooms,
+        // b17: estado de limpieza visible al asignar (compat: free_rooms sigue).
+        free_rooms_detail: availability.freeRoomsDetail,
       },
     });
   } catch (e: unknown) {

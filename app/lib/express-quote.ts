@@ -118,6 +118,8 @@ export interface RoomAvailability {
   taken: Set<string>;
   /** Cuartos físicos libres, en el orden de la lista del hotel. */
   freeRooms: string[];
+  /** Libres con su estado de limpieza ("clean" | "dirty" | "blocked"…). */
+  freeRoomsDetail: { room: string; state: string }[];
 }
 
 /** Disponibilidad real en el rango: aforo + cuartos físicos tomados. */
@@ -126,10 +128,10 @@ export async function roomAvailability(input: {
   checkOut: string;
   excludeId?: string;
 }): Promise<RoomAvailability> {
-  const roomList = await supabaseGet<{ room: string }>('hotel_rooms_state', {
-    select: 'room',
+  const roomList = await supabaseGet<{ room: string; state: string }>('hotel_rooms_state', {
+    select: 'room,state',
     limit: '50',
-  }).catch(() => [] as { room: string }[]);
+  }).catch(() => [] as { room: string; state: string }[]);
   const totalRooms = Math.max(roomList.length, 1);
 
   const filters: Record<string, string> = {
@@ -152,10 +154,12 @@ export async function roomAvailability(input: {
     if (Array.isArray(o.assigned_rooms)) for (const a of o.assigned_rooms) taken.add(a);
   }
 
+  const free = roomList.filter((r) => !taken.has(r.room));
   return {
     totalRooms,
     occupiedCount,
     taken,
-    freeRooms: roomList.map((r) => r.room).filter((r) => !taken.has(r)),
+    freeRooms: free.map((r) => r.room),
+    freeRoomsDetail: free.map((r) => ({ room: r.room, state: r.state })),
   };
 }
