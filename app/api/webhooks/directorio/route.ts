@@ -97,14 +97,14 @@ export async function POST(req: NextRequest) {
         createCalendarEvent(calPayload, r.folio, '2'),
         sendDirectorioNewReservationEmail(r, guestNotes),
       ]);
-      sendHotelPush({
+      await sendHotelPush({
         title: `Reserva del Directorio · ${r.folio}`,
         body: `${r.guest_name} · ${r.nights ?? '?'} noche(s) · llega ${r.check_in}`,
       }).catch((e: unknown) => console.error('[WEBHOOK/DIRECTORIO] push failed', e));
     } else {
       await findAndDeleteCalendarEventsByFolio(r.folio);
       await sendDirectorioCancelledEmail(r);
-      sendHotelPush({
+      await sendHotelPush({
         title: `Reserva cancelada · ${r.folio}`,
         body: `${r.guest_name} — cancelada desde el Directorio`,
       }).catch((e: unknown) => console.error('[WEBHOOK/DIRECTORIO] push failed', e));

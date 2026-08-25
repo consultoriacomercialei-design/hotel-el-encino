@@ -117,8 +117,9 @@ export async function POST(req: NextRequest) {
   });
   if (!row) return NextResponse.json({ success: false, error: 'No se pudo crear' }, { status: 500 });
 
-  // b11: aviso push al staff (el que la creó la ignora; los demás se enteran).
-  sendHotelPush({
+  // b11: aviso push al staff — AWAITED (Vercel congela tras responder;
+  // un push sin await muere por timeout — incidente 24-ago).
+  await sendHotelPush({
     title: `Reserva nueva · ${row.folio}`,
     body: `${name} · ${nights} noche(s) · $${Math.round(total).toLocaleString('es-MX')} · llega ${checkIn} (creada por ${staff.full_name})`,
   }).catch(() => undefined);

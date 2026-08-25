@@ -60,7 +60,8 @@ export async function POST(
   });
   if (!result) return NextResponse.json({ success: false, error: 'No se pudo registrar' }, { status: 500 });
 
-  sendHotelPush({
+  // Awaited: sin await, Vercel congela la función y el push se pierde.
+  await sendHotelPush({
     title: `Pago registrado · ${r.folio ?? ''}`,
     body: `$${Math.round(amount).toLocaleString('es-MX')} (${method}) · ${r.guest_name} — saldo $${Math.round(result.balance).toLocaleString('es-MX')}`,
   }).catch(() => undefined);

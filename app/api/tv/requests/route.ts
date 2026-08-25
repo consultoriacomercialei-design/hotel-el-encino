@@ -43,16 +43,18 @@ export async function POST(req: NextRequest) {
   });
   if (!row) return NextResponse.json({ error: 'No se pudo registrar' }, { status: 500 });
 
-  // Push a El Encino Manager (dueño+hermano) — sonido propio de request,
-  // best-effort: el correo de abajo sigue siendo el respaldo.
-  sendHotelPush({
+  // Push a El Encino Manager (dueño+hermano) — best-effort pero AWAITED:
+  // en Vercel la función se CONGELA al responder, así que un push disparado
+  // sin await queda a medio camino y muere por timeout (incidente 24-ago,
+  // "no llegó la notificación"). Esperarlo cuesta ~1 s y garantiza el envío.
+  await sendHotelPush({
     title: `Habitación ${room}`,
     body: TYPE_LABEL[type] + (note ? ` — ${note.slice(0, 80)}` : ''),
     url: `encino://request/${row.id}`,
   }).catch((e: unknown) => console.error('[tv/requests] push failed', e));
 
-  // Live Activity en los iPhone del staff (b9) — best-effort.
-  syncRequestsLiveActivity(true).catch((e: unknown) =>
+  // Live Activity en los iPhone del staff (b9) — misma regla: awaited.
+  await syncRequestsLiveActivity(true).catch((e: unknown) =>
     console.error('[tv/requests] live activity failed', e));
 
   // Aviso interno best-effort (fetch crudo a Resend, mismo patrón que emails.ts):

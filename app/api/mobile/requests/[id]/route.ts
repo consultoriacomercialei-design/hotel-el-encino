@@ -38,7 +38,9 @@ export async function PATCH(
   if (!updated) return NextResponse.json({ success: false, error: 'No encontrado' }, { status: 404 });
 
   // Reconciliar la Live Activity (avanza a la siguiente request o termina).
-  syncRequestsLiveActivity().catch((e: unknown) =>
+  // Awaited: sin await, Vercel congela la función y el push de la activity
+  // se pierde (incidente 24-ago).
+  await syncRequestsLiveActivity().catch((e: unknown) =>
     console.error('[mobile/requests] live activity failed', e));
 
   const rows = await supabaseGet<Record<string, unknown>>('service_requests', {

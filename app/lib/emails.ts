@@ -13,10 +13,12 @@ import { ensureCheckinCode } from '@/app/lib/wallet/checkin-code';
 import { sendHotelPush } from '@/app/lib/apns-hotel';
 
 /** b11: push al staff (El Encino Manager) en cada evento de reserva/pago.
- *  Best-effort y fire-and-forget: jamás frena el correo que lo acompaña. */
-function pushStaff(title: string, body: string): void {
-  sendHotelPush({ title, body }).catch((e: unknown) =>
-    console.error('[emails] push failed', e));
+ *  Best-effort pero AWAITED por el caller: en Vercel la función se congela al
+ *  responder y un push sin await muere por timeout (incidente 24-ago). */
+function pushStaff(title: string, body: string): Promise<void> {
+  return sendHotelPush({ title, body })
+    .then(() => undefined)
+    .catch((e: unknown) => console.error('[emails] push failed', e));
 }
 
 function fmtMoney(n: number | null | undefined): string {
@@ -202,7 +204,7 @@ export async function sendConfirmedEmails(
   folio: string
 ) {
   const room = ROOM_LABELS[payload.room_type] || payload.room_type;
-  pushStaff(
+  await pushStaff(
     `Reserva nueva · ${folio}`,
     `${payload.guest_name} · ${payload.nights} noche(s) · ${fmtMoney(payload.total_mxn)} · llega ${payload.check_in}`
   );
@@ -548,7 +550,7 @@ export async function sendReservationUpdatedEmail(input: {
 // Motivo: no confirmó en 2 horas (timeout WhatsApp / sin pago)
 export async function sendCancelledTimeoutEmail(payload: ReservationPayload, folio: string) {
   const room = ROOM_LABELS[payload.room_type] || payload.room_type;
-  pushStaff(`Reserva cancelada · ${folio}`, `${payload.guest_name} — no confirmó a tiempo`);
+  await pushStaff(`Reserva cancelada · ${folio}`, `${payload.guest_name} — no confirmó a tiempo`);
   await sendEmail({
     from: FROM, to: [payload.guest_email],
     subject: `Reservación liberada — Hotel El Encino · ${folio}`,
@@ -570,7 +572,7 @@ export async function sendCancelledTimeoutEmail(payload: ReservationPayload, fol
 // Motivo: cliente solicitó cancelación (sin pago previo)
 export async function sendCancelledByRequestEmail(payload: ReservationPayload, folio: string) {
   const room = ROOM_LABELS[payload.room_type] || payload.room_type;
-  pushStaff(`Reserva cancelada · ${folio}`, `${payload.guest_name} — canceló su reservación`);
+  await pushStaff(`Reserva cancelada · ${folio}`, `${payload.guest_name} — canceló su reservación`);
   await sendEmail({
     from: FROM, to: [payload.guest_email],
     subject: `Reservación cancelada — Hotel El Encino · ${folio}`,
@@ -593,7 +595,7 @@ export async function sendCancelledRefundPendingEmail(
   paymentId?: string
 ) {
   const room = ROOM_LABELS[payload.room_type] || payload.room_type;
-  pushStaff(`Reserva cancelada · ${folio}`, `${payload.guest_name} — pagó en línea, reembolso por autorizar`);
+  await pushStaff(`Reserva cancelada · ${folio}`, `${payload.guest_name} — pagó en línea, reembolso por autorizar`);
   const referenceBlock = paymentId
     ? `<p style="margin:8px 0 0;color:#6b6b6b;font-size:0.82rem">Número de referencia MP: <strong style="font-family:monospace">${paymentId}</strong></p>`
     : '';
@@ -623,7 +625,7 @@ export async function sendCancelledRefundPendingEmail(
 // Motivo: pago MP iniciado pero no completado (checkout abandonado, link expirado)
 export async function sendCancelledMpIncompleteEmail(payload: ReservationPayload, folio: string) {
   const room = ROOM_LABELS[payload.room_type] || payload.room_type;
-  pushStaff(`Reserva cancelada · ${folio}`, `${payload.guest_name} — pago no completado`);
+  await pushStaff(`Reserva cancelada · ${folio}`, `${payload.guest_name} — pago no completado`);
   await sendEmail({
     from: FROM, to: [payload.guest_email],
     subject: `Pago no completado — Hotel El Encino · ${folio}`,
@@ -652,7 +654,7 @@ export async function sendCancelledMpIncompleteEmail(payload: ReservationPayload
 
 export async function sendPaymentConfirmedEmails(reservation: FullReservation) {
   const room = ROOM_LABELS[reservation.room_type] || reservation.room_type;
-  pushStaff(
+  await pushStaff(
     `Pago recibido · ${reservation.folio}`,
     `${fmtMoney(reservation.total_mxn)} · ${reservation.guest_name}`
   );
