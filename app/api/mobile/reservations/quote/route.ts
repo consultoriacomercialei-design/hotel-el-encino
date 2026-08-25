@@ -13,11 +13,12 @@ export async function POST(req: NextRequest) {
   if (!staff) return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
 
   const b = (await req.json().catch(() => ({}))) as {
-    check_in?: string; check_out?: string; occupancy?: unknown;
+    check_in?: string; check_out?: string; occupancy?: unknown; exclude_id?: string;
   };
   const checkIn = b.check_in ?? '';
   const checkOut = b.check_out ?? '';
   if (!/^\d{4}-\d{2}-\d{2}$/.test(checkIn) || !/^\d{4}-\d{2}-\d{2}$/.test(checkOut) || checkOut <= checkIn) {
+    console.error('[quote] 400 fechas', JSON.stringify({ checkIn, checkOut }));
     return NextResponse.json({ success: false, error: 'Fechas inválidas' }, { status: 400 });
   }
 
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
     const occupancy = parseOccupancy(b.occupancy);
     const [quote, availability] = await Promise.all([
       quoteExpress({ checkIn, checkOut, occupancy }),
-      roomAvailability({ checkIn, checkOut }),
+      roomAvailability({ checkIn, checkOut, excludeId: typeof b.exclude_id === 'string' ? b.exclude_id : undefined }),
     ]);
     const roomsLeft = Math.max(availability.totalRooms - availability.occupiedCount, 0);
     return NextResponse.json({

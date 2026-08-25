@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
   const checkOut = b.check_out ?? '';
   const total = Number(b.total_mxn);
   if (!name || !/^\d{4}-\d{2}-\d{2}$/.test(checkIn) || !/^\d{4}-\d{2}-\d{2}$/.test(checkOut) || checkOut <= checkIn) {
+    console.error('[create] 400 payload', JSON.stringify({ name: name.slice(0, 20), checkIn, checkOut, total }));
     return NextResponse.json({ success: false, error: 'Faltan nombre o fechas válidas' }, { status: 400 });
   }
   if (!Number.isFinite(total) || total < 0 || total > 500_000) {

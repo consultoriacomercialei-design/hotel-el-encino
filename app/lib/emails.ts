@@ -201,13 +201,17 @@ async function sendEmail(body: Record<string, unknown>): Promise<{ ok: boolean; 
 export async function sendConfirmedEmails(
   payload: ReservationPayload,
   reservationId: string,
-  folio: string
+  folio: string,
+  /** b19: solo el correo del huésped (exprés/reenvío — el staff ya fue avisado). */
+  opts?: { guestOnly?: boolean }
 ) {
   const room = ROOM_LABELS[payload.room_type] || payload.room_type;
-  await pushStaff(
-    `Reserva nueva · ${folio}`,
-    `${payload.guest_name} · ${payload.nights} noche(s) · ${fmtMoney(payload.total_mxn)} · llega ${payload.check_in}`
-  );
+  if (!opts?.guestOnly) {
+    await pushStaff(
+      `Reserva nueva · ${folio}`,
+      `${payload.guest_name} · ${payload.nights} noche(s) · ${fmtMoney(payload.total_mxn)} · llega ${payload.check_in}`
+    );
+  }
   const icsContent = generateICS(payload, reservationId, folio);
   const icsBase64 = Buffer.from(icsContent).toString('base64');
   const icsAttachment = { filename: `reservacion-${folio}.ics`, content: icsBase64 };
@@ -255,8 +259,8 @@ export async function sendConfirmedEmails(
         </div>
       `,
     }),
-    // Hotel + Admin
-    sendEmail({
+    // Hotel + Admin (omitido en guestOnly)
+    opts?.guestOnly ? Promise.resolve(null) : sendEmail({
       from: FROM, to: NOTIFY_RECIPIENTS,
       subject: `🏨 Nueva reservación — ${payload.guest_name} · ${formatDate(payload.check_in)}`,
       html: `

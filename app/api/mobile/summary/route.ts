@@ -41,13 +41,13 @@ export async function GET(req: NextRequest) {
 
   const [arrivals, departures, weekRows, openRequests, pendingPay, roomStates, createdToday] = await Promise.all([
     supabaseGet<ReservationRow>('reservations', {
-      select: 'id,folio,guest_name,guest_phone,guest_email,room_type,rooms,adults,children,room,assigned_rooms,check_in,check_out,nights,total_mxn,occupancy,status,checkin_at,checkout_at,source,paid_at,checkin_code,late_checkout_until,damage_consent_at,id_photo_path,signature_path',
+      select: 'id,folio,guest_name,guest_phone,guest_email,room_type,rooms,adults,children,room,assigned_rooms,check_in,check_out,nights,total_mxn,occupancy,status,checkin_at,checkout_at,source,paid_at,checkin_code,notes,late_checkout_until,damage_consent_at,id_photo_path,signature_path',
       check_in: `eq.${today}`,
       status: 'in.(confirmed,pending_payment)',
       order: 'guest_name.asc',
     }),
     supabaseGet<ReservationRow>('reservations', {
-      select: 'id,folio,guest_name,guest_phone,guest_email,room_type,rooms,adults,children,room,assigned_rooms,check_in,check_out,nights,total_mxn,occupancy,status,checkin_at,checkout_at,source,paid_at,checkin_code,late_checkout_until,damage_consent_at,id_photo_path,signature_path',
+      select: 'id,folio,guest_name,guest_phone,guest_email,room_type,rooms,adults,children,room,assigned_rooms,check_in,check_out,nights,total_mxn,occupancy,status,checkin_at,checkout_at,source,paid_at,checkin_code,notes,late_checkout_until,damage_consent_at,id_photo_path,signature_path',
       check_out: `eq.${today}`,
       status: 'in.(confirmed,checked_out)',
       order: 'guest_name.asc',
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
     // b13: reservas CREADAS hoy (para cualquier fecha) — "¿qué pasó HOY?".
     // Medianoche de Monterrey = 06:00 UTC (NL sin horario de verano desde 2022).
     supabaseGet<ReservationRow>('reservations', {
-      select: 'id,folio,guest_name,guest_phone,guest_email,room_type,rooms,adults,children,room,assigned_rooms,check_in,check_out,nights,total_mxn,occupancy,status,checkin_at,checkout_at,source,paid_at,checkin_code,late_checkout_until,damage_consent_at,id_photo_path,signature_path',
+      select: 'id,folio,guest_name,guest_phone,guest_email,room_type,rooms,adults,children,room,assigned_rooms,check_in,check_out,nights,total_mxn,occupancy,status,checkin_at,checkout_at,source,paid_at,checkin_code,notes,late_checkout_until,damage_consent_at,id_photo_path,signature_path',
       created_at: `gte.${today}T06:00:00Z`,
       order: 'created_at.desc',
       limit: '30',
