@@ -101,7 +101,9 @@ export async function PATCH(
 
   // b13: avisar al huésped del cambio (queda en email_log con tracking).
   if (r.guest_email) {
-    sendReservationUpdatedEmail({
+    // AWAITED: Vercel congela la función al responder y el envío se pierde
+    // (incidente 24-ago). El correo no debe tumbar el cambio ya guardado.
+    await sendReservationUpdatedEmail({
       reservationId: r.id,
       folio: r.folio ?? '',
       guestName: r.guest_name,

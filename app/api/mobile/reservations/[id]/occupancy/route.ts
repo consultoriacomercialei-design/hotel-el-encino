@@ -136,7 +136,9 @@ export async function PATCH(
     const roomsLine = breakdown
       .map((o, i) => `Hab. ${i + 1}: ${o.adults} adulto(s)${o.children > 0 ? ` + ${o.children} niño(s)` : ''}`)
       .join(' · ');
-    sendReservationUpdatedEmail({
+    // AWAITED: Vercel congela la función al responder y el envío se pierde
+    // (incidente 24-ago). El correo no debe tumbar el cambio ya guardado.
+    await sendReservationUpdatedEmail({
       reservationId: r.id,
       folio: r.folio ?? '',
       guestName: r.guest_name,

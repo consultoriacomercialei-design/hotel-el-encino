@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireHotelStaff } from '@/app/lib/mobile-auth';
-import { supabaseGet, supabasePatch } from '@/app/lib/supabase';
+import { supabaseGet, supabasePatch, supabasePost, logAuditEvent } from '@/app/lib/supabase';
 import { propagateDirectorioCheckin } from '@/app/lib/directorio-mirror';
 
 export const dynamic = 'force-dynamic';
@@ -133,6 +133,58 @@ export async function POST(
   // escáner del admin web lo hace desde siempre y la app no, así que al
   // huésped registrado desde la app su pase le seguía diciendo "sin check-in".
   if (!already) await propagateDirectorioCheckin(r.notes, now);
+
+  // b22: registro en la BASE DE CLIENTES (`guest_checkins`, la tabla que lee
+  // /admin/clientes) y sello de identidad verificada. El escáner del admin lo
+  // hace desde siempre; la app no, así que quien se registraba desde el wizard
+  // quedaba invisible en clientes y su reserva sin el badge de "verificado"
+  // aunque la foto de la identificación sí se hubiera subido.
+  const registroDeIdentidad = !!(patch.id_photo_path || patch.id_number || body.id_type);
+  if (registroDeIdentidad) {
+    const yaRegistrado = await supabaseGet<{ id: string }>('guest_checkins', {
+      select: 'id',
+      reservation_id: `eq.${id}`,
+      full_name: `eq.${r.guest_name}`,
+      limit: '1',
+    }).catch(() => [] as { id: string }[]);
+
+    if (yaRegistrado.length === 0) {
+      try {
+        await supabasePost('guest_checkins', {
+          reservation_id: id,
+          folio: r.folio,
+          full_name: r.guest_name,
+          email: (patch.guest_email as string) ?? null,
+          phone: (patch.guest_phone as string) ?? null,
+          id_doc_type: (patch.id_type as string) ?? body.id_type ?? null,
+          id_doc_number: (patch.id_number as string) ?? null,
+          id_doc_photo_path: (patch.id_photo_path as string) ?? null,
+          id_doc_photo_back_path: (patch.id_photo_back_path as string) ?? null,
+          checked_in_at: now,
+        });
+      } catch (err) {
+        // La llegada YA quedó registrada: esto no debe tumbar el check-in.
+        console.error('[mobile/checkin] no se pudo escribir en guest_checkins', err);
+      }
+    }
+
+    if (patch.id_photo_path || patch.id_number) {
+      await supabasePatch('reservations', id, { id_verified: true, id_verified_at: now });
+    }
+  }
+
+  logAuditEvent({
+    event: 'reservation.checkin',
+    status: 'ok',
+    reservation_id: id,
+    folio: r.folio ?? undefined,
+    details: {
+      full_name: r.guest_name,
+      express: !!body.express,
+      photo: Boolean(patch.id_photo_path),
+      by: staff.full_name,
+    },
+  });
 
   return NextResponse.json({ success: true, data: { already, express: !!body.express } });
 }

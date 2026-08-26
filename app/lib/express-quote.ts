@@ -116,6 +116,8 @@ export interface RoomAvailability {
   occupiedCount: number;
   /** Cuartos físicos tomados (asignados o con check-in) en el rango. */
   taken: Set<string>;
+  /** Cuartos bloqueados por mantenimiento (no vendibles). */
+  blocked: Set<string>;
   /** Cuartos físicos libres, en el orden de la lista del hotel. */
   freeRooms: string[];
   /** Libres con su estado de limpieza ("clean" | "dirty" | "blocked"…). */
@@ -128,11 +130,20 @@ export async function roomAvailability(input: {
   checkOut: string;
   excludeId?: string;
 }): Promise<RoomAvailability> {
-  const roomList = await supabaseGet<{ room: string; state: string }>('hotel_rooms_state', {
-    select: 'room,state',
-    limit: '50',
-  }).catch(() => [] as { room: string; state: string }[]);
-  const totalRooms = Math.max(roomList.length, 1);
+  const roomList = await supabaseGet<{ room: string; state: string; blocked_until: string | null }>(
+    'hotel_rooms_state',
+    { select: 'room,state,blocked_until', limit: '50' }
+  ).catch(() => [] as { room: string; state: string; blocked_until: string | null }[]);
+
+  // b22: un cuarto BLOQUEADO (mantenimiento) no es vendible. Antes solo se
+  // avisaba en la app con un texto y tanto el alta como la edición lo dejaban
+  // asignar de punta a punta. El bloqueo vencido ya no cuenta.
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Monterrey' });
+  const isBlocked = (r: { state: string; blocked_until: string | null }) =>
+    r.state === 'blocked' && (!r.blocked_until || r.blocked_until >= today);
+
+  const sellable = roomList.filter((r) => !isBlocked(r));
+  const totalRooms = Math.max(sellable.length, 1);
 
   const filters: Record<string, string> = {
     select: 'id,room,rooms,assigned_rooms',
@@ -154,11 +165,12 @@ export async function roomAvailability(input: {
     if (Array.isArray(o.assigned_rooms)) for (const a of o.assigned_rooms) taken.add(a);
   }
 
-  const free = roomList.filter((r) => !taken.has(r.room));
+  const free = sellable.filter((r) => !taken.has(r.room));
   return {
     totalRooms,
     occupiedCount,
     taken,
+    blocked: new Set(roomList.filter(isBlocked).map((r) => r.room)),
     freeRooms: free.map((r) => r.room),
     freeRoomsDetail: free.map((r) => ({ room: r.room, state: r.state })),
   };

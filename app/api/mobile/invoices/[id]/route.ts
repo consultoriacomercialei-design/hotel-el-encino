@@ -18,7 +18,7 @@ export async function POST(
 
   const { id } = await params;
   const body = (await req.json().catch(() => ({}))) as {
-    action?: string; email?: string; motive?: string;
+    action?: string; email?: string; motive?: string; substitution?: string;
   };
 
   const rows = await supabaseGet<{
@@ -46,7 +46,17 @@ export async function POST(
         return NextResponse.json({ success: true, data: { already: true } });
       }
       const motive = ['01', '02', '03', '04'].includes(body.motive ?? '') ? body.motive! : '02';
-      await cancelCFDI(inv.facturapi_id, motive);
+      // b22: el motivo 01 ("con errores CON relación") exige el folio que la
+      // sustituye — el admin web lo bloquea desde siempre y la app lo dejaba
+      // pasar, dejando la cancelación inconsistente ante el SAT.
+      const substitution = body.substitution?.trim();
+      if (motive === '01' && !substitution) {
+        return NextResponse.json(
+          { success: false, error: 'El motivo 01 requiere el folio del CFDI que sustituye a este.' },
+          { status: 400 }
+        );
+      }
+      await cancelCFDI(inv.facturapi_id, motive, substitution || undefined);
       await supabasePatch('invoices', id, {
         status: 'cancelled',
         cancelled_at: new Date().toISOString(),

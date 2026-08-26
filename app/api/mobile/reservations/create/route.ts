@@ -92,7 +92,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { success: false, error: availability.taken.has(clash)
           ? `El ${clash} ya está tomado por otra reserva en esas fechas`
-          : `El cuarto "${clash}" no existe` },
+          : availability.blocked.has(clash)
+            ? `El ${clash} está bloqueado por mantenimiento`
+            : `El cuarto "${clash}" no existe` },
       { status: 409 }
     );
   }
