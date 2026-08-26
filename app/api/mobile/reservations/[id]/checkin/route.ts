@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireHotelStaff } from '@/app/lib/mobile-auth';
 import { supabaseGet, supabasePatch } from '@/app/lib/supabase';
+import { propagateDirectorioCheckin } from '@/app/lib/directorio-mirror';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,9 +59,9 @@ export async function POST(
 
   const rows = await supabaseGet<{
     id: string; status: string; checkin_at: string | null; checkin_code: string | null;
-    guest_name: string; folio: string | null;
+    guest_name: string; folio: string | null; notes: string | null;
   }>('reservations', {
-    select: 'id,status,checkin_at,checkin_code,guest_name,folio',
+    select: 'id,status,checkin_at,checkin_code,guest_name,folio,notes',
     id: `eq.${id}`,
     limit: '1',
   });
@@ -127,6 +128,11 @@ export async function POST(
     const ok = await supabasePatch('reservations', id, patch);
     if (!ok) return NextResponse.json({ success: false, error: 'No se pudo registrar' }, { status: 500 });
   }
+
+  // b22: si la reserva nació en el Directorio, reflejar la llegada allá — el
+  // escáner del admin web lo hace desde siempre y la app no, así que al
+  // huésped registrado desde la app su pase le seguía diciendo "sin check-in".
+  if (!already) await propagateDirectorioCheckin(r.notes, now);
 
   return NextResponse.json({ success: true, data: { already, express: !!body.express } });
 }

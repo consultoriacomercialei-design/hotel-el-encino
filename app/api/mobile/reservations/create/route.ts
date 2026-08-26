@@ -3,6 +3,9 @@ import { requireHotelStaff } from '@/app/lib/mobile-auth';
 import { supabasePost, getNextFolio } from '@/app/lib/supabase';
 import { sendHotelPush } from '@/app/lib/apns-hotel';
 import { parseOccupancy, quoteExpress, roomAvailability } from '@/app/lib/express-quote';
+import { sendConfirmedEmails, type ReservationPayload } from '@/app/lib/emails';
+import { createCalendarEvent, type CalendarPayload } from '@/app/lib/google-calendar';
+import { recordManualPartialPayment } from '@/app/lib/payments';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +23,10 @@ export async function POST(req: NextRequest) {
     occupancy?: unknown; assigned_rooms?: unknown;
     adults?: number; rooms?: number; room_type?: string;
     check_in?: string; check_out?: string; total_mxn?: number; notes?: string;
+    /** b22: pago recibido en el mostrador, registrado en el MISMO request. */
+    payment_received?: { amount_mxn?: number | string; method?: string };
+    /** b22: correo de confirmación al huésped (default true si hay correo). */
+    notify?: boolean;
   };
 
   const name = (b.guest_name ?? '').trim().slice(0, 120);
@@ -94,16 +101,21 @@ export async function POST(req: NextRequest) {
   const children = occupancy.reduce((s, o) => s + o.children, 0);
   const nights = quote.nights;
 
+  const phone = (b.guest_phone ?? '').trim().slice(0, 30);
+  const email = (b.guest_email ?? '').trim().slice(0, 120);
+  const roomType = (b.room_type ?? 'doble').slice(0, 40);
+  const notes = (b.notes ?? '').slice(0, 500);
+
   const folio = await getNextFolio();
   const row = await supabasePost<{ id: string; folio: string }>('reservations', {
     folio,
     guest_name: name,
-    guest_phone: (b.guest_phone ?? '').trim().slice(0, 30) || null,
-    guest_email: (b.guest_email ?? '').trim().slice(0, 120) || null,
+    guest_phone: phone || null,
+    guest_email: email || null,
     adults,
     children,
     occupancy,
-    room_type: (b.room_type ?? 'doble').slice(0, 40),
+    room_type: roomType,
     rooms: occupancy.length,
     assigned_rooms: wanted.length > 0 ? wanted : null,
     room: wanted[0] ?? null,
@@ -114,9 +126,71 @@ export async function POST(req: NextRequest) {
     occupancy_surcharge_mxn: quote.surcharge_mxn,
     status: 'confirmed',
     source: 'walk-in-app',
-    notes: (b.notes ?? '').slice(0, 500) || null,
+    notes: notes || null,
   });
   if (!row) return NextResponse.json({ success: false, error: 'No se pudo crear' }, { status: 500 });
+
+  // b22: pago del mostrador en el MISMO request (patrón del admin web). Antes
+  // la app lo mandaba en una segunda llamada con `try?`: si fallaba, el dinero
+  // se perdía en silencio y nadie se enteraba.
+  let paidMxn = 0;
+  let paymentError: string | null = null;
+  const pay = b.payment_received;
+  const payAmount = Number(pay?.amount_mxn);
+  const payMethod = pay?.method ?? '';
+  if (pay && Number.isFinite(payAmount) && payAmount > 0) {
+    if (!['efectivo', 'terminal', 'transferencia'].includes(payMethod)) {
+      paymentError = 'Método de pago inválido';
+    } else if (payAmount > total + 0.01) {
+      paymentError = 'El pago excede el total de la reserva';
+    } else {
+      const result = await recordManualPartialPayment({
+        reservationId: row.id,
+        amountMxn: payAmount,
+        method: payMethod,
+        registeredBy: staff.full_name,
+      });
+      if (result) paidMxn = result.paid;
+      else paymentError = 'No se pudo registrar el pago';
+    }
+  }
+
+  // b22: confirmación al huésped + evento en el calendario del hotel — las dos
+  // cosas que el admin web SIEMPRE ha hecho y la reserva exprés nunca hizo
+  // (RSV-186 se creó sin avisarle a la huésped). Awaited: Vercel congela la
+  // función al responder y un envío suelto se pierde (incidente 24-ago).
+  const wantsEmail = b.notify !== false && !!email;
+  let emailSent = false;
+  let emailError: string | null = null;
+  {
+    const calPayload: CalendarPayload = {
+      guest_name: name, guest_phone: phone, guest_email: email,
+      room_type: roomType, check_in: checkIn, check_out: checkOut,
+      total_mxn: total, adults, children, rooms: occupancy.length, notes,
+    };
+    const mailPayload: ReservationPayload = {
+      guest_name: name, guest_email: email, guest_phone: phone,
+      room_type: roomType, check_in: checkIn, check_out: checkOut,
+      nights, total_mxn: total, adults, children,
+      rooms: occupancy.length, notes, source: 'walk-in-app',
+    };
+    const results = await Promise.allSettled([
+      createCalendarEvent(calPayload, row.folio, '2'),
+      wantsEmail
+        ? sendConfirmedEmails(mailPayload, row.id, row.folio, { guestOnly: true, paidMxn })
+        : Promise.resolve(null),
+    ]);
+    if (results[0].status === 'rejected') {
+      console.error('[create] calendario falló (reserva ya guardada)', results[0].reason);
+    }
+    if (wantsEmail) {
+      emailSent = results[1].status === 'fulfilled';
+      if (!emailSent) {
+        emailError = 'No se pudo enviar el correo al huésped';
+        console.error('[create] correo al huésped falló', (results[1] as PromiseRejectedResult).reason);
+      }
+    }
+  }
 
   // b11: aviso push al staff — AWAITED (Vercel congela tras responder;
   // un push sin await muere por timeout — incidente 24-ago).
@@ -127,6 +201,15 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    data: { id: row.id, folio: row.folio, suggested_total: quote.total_mxn },
+    data: {
+      id: row.id,
+      folio: row.folio,
+      suggested_total: quote.total_mxn,
+      paid_mxn: paidMxn,
+      email_sent: emailSent,
+      // La reserva SÍ se creó: estos avisos son para que el mostrador sepa qué
+      // quedó pendiente, no errores que tumben la operación.
+      warnings: [paymentError, emailError].filter((w): w is string => !!w),
+    },
   });
 }

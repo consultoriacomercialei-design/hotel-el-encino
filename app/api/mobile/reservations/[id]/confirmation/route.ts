@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireHotelStaff } from '@/app/lib/mobile-auth';
 import { supabaseGet } from '@/app/lib/supabase';
 import { sendConfirmedEmails, type ReservationPayload } from '@/app/lib/emails';
+import { paidSumsFor } from '@/app/lib/payments';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +17,7 @@ export async function POST(
   if (!staff) return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
 
   const { id } = await params;
-  const rows = await supabaseGet<ReservationPayload & { id: string; folio: string; status: string }>('reservations', {
+  const rows = await supabaseGet<ReservationPayload & { id: string; folio: string; status: string; paid_at: string | null }>('reservations', {
     select: '*',
     id: `eq.${id}`,
     limit: '1',
@@ -31,7 +32,10 @@ export async function POST(
   }
 
   try {
-    await sendConfirmedEmails(r, r.id, r.folio, { guestOnly: true });
+    // b22: el correo refleja el pago YA registrado (si lo hay), en vez de
+    // pedirle el total al huésped que ya pagó en el mostrador.
+    const sums = await paidSumsFor([{ id: r.id, total_mxn: r.total_mxn ?? null, paid_at: r.paid_at ?? null }]);
+    await sendConfirmedEmails(r, r.id, r.folio, { guestOnly: true, paidMxn: sums[r.id] ?? 0 });
     return NextResponse.json({ success: true, data: { sent: true, to: r.guest_email } });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'No se pudo enviar';

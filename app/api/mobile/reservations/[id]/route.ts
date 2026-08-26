@@ -28,11 +28,12 @@ export async function PATCH(
 
   const rows = await supabaseGet<{
     id: string; folio: string | null; status: string;
-    guest_name: string; guest_email: string | null; room: string | null;
+    guest_name: string; guest_email: string | null; guest_phone: string | null;
+    notes: string | null; room: string | null;
     check_in: string; check_out: string; nights: number | null;
     rooms: number | null; total_mxn: number | null; checkin_at: string | null;
   }>('reservations', {
-    select: 'id,folio,status,guest_name,guest_email,room,check_in,check_out,nights,rooms,total_mxn,checkin_at',
+    select: 'id,folio,status,guest_name,guest_email,guest_phone,notes,room,check_in,check_out,nights,rooms,total_mxn,checkin_at',
     id: `eq.${id}`,
     limit: '1',
   });
@@ -109,11 +110,16 @@ export async function PATCH(
   const adults = occupancy.reduce((s, o) => s + o.adults, 0);
   const children = occupancy.reduce((s, o) => s + o.children, 0);
 
+  // Campo AUSENTE = "no lo toques"; campo vacío = "bórralo". Antes cualquier
+  // llamada que omitiera teléfono, correo o notas los borraba en silencio.
+  const keepOrSet = (incoming: string | undefined, current: string | null, max: number) =>
+    incoming === undefined ? current : (incoming.trim().slice(0, max) || null);
+
   const ok = await supabasePatch('reservations', id, {
     guest_name: name,
-    guest_phone: (b.guest_phone ?? '').trim().slice(0, 30) || null,
-    guest_email: (b.guest_email ?? '').trim().slice(0, 120) || null,
-    notes: (b.notes ?? '').trim().slice(0, 500) || null,
+    guest_phone: keepOrSet(b.guest_phone, r.guest_phone, 30),
+    guest_email: keepOrSet(b.guest_email, r.guest_email, 120),
+    notes: keepOrSet(b.notes, r.notes, 500),
     check_in: checkIn,
     check_out: checkOut,
     nights: quote.nights,
@@ -144,7 +150,10 @@ export async function PATCH(
       lines.push(`🛏️ <strong>${occupancy.length} habitación${occupancy.length === 1 ? '' : 'es'}</strong> · ${adults} adulto(s)${children > 0 ? ` y ${children} niño(s)` : ''}`);
     }
     lines.push(`💰 Total: <strong>$${total.toLocaleString('es-MX')} MXN</strong>`);
-    sendReservationUpdatedEmail({
+    // AWAITED: Vercel congela la función al responder y un envío suelto se
+    // pierde (incidente 24-ago). El correo no debe tumbar la edición ya
+    // guardada, por eso el catch — pero se espera de verdad.
+    await sendReservationUpdatedEmail({
       reservationId: r.id,
       folio: r.folio ?? '',
       guestName: name,

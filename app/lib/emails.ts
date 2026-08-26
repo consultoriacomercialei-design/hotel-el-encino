@@ -202,8 +202,12 @@ export async function sendConfirmedEmails(
   payload: ReservationPayload,
   reservationId: string,
   folio: string,
-  /** b19: solo el correo del huésped (exprés/reenvío — el staff ya fue avisado). */
-  opts?: { guestOnly?: boolean }
+  /**
+   * b19: `guestOnly` = solo el correo del huésped (exprés/reenvío — el staff
+   * ya fue avisado). b22: `paidMxn` = pago ya registrado en `payments`, para
+   * que el correo diga la verdad sobre el saldo.
+   */
+  opts?: { guestOnly?: boolean; paidMxn?: number }
 ) {
   const room = ROOM_LABELS[payload.room_type] || payload.room_type;
   if (!opts?.guestOnly) {
@@ -217,14 +221,21 @@ export async function sendConfirmedEmails(
   const icsAttachment = { filename: `reservacion-${folio}.ics`, content: icsBase64 };
   const checkinCode = (await ensureCheckinCode(reservationId)) ?? undefined;
 
-  const anticipo  = parseAnticipo(payload.notes);
+  // b22: el pago REAL registrado en `payments` manda sobre el anticipo
+  // adivinado del texto de las notas. Sin él, a quien ya pagó en el mostrador
+  // se le decía "el saldo total se liquida al check-in".
+  const anticipo  = opts?.paidMxn && opts.paidMxn > 0 ? opts.paidMxn : parseAnticipo(payload.notes);
   const saldo     = anticipo ? Math.max(0, payload.total_mxn - anticipo) : payload.total_mxn;
 
   const paymentBlock = anticipo
-    ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;margin-bottom:16px">
+    ? (saldo <= 0
+        ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;margin-bottom:16px">
+        <p style="margin:0;color:#166534;font-size:0.88rem">✓ <strong>Pago recibido:</strong> $${anticipo.toLocaleString('es-MX')} MXN — tu reservación está <strong>liquidada</strong>.</p>
+      </div>`
+        : `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;margin-bottom:16px">
         <p style="margin:0 0 6px;color:#166534;font-size:0.88rem">✓ <strong>Anticipo recibido:</strong> $${anticipo.toLocaleString('es-MX')} MXN</p>
         <p style="margin:0;color:#166534;font-size:0.88rem">💳 <strong>Saldo a liquidar al check-in:</strong> $${saldo.toLocaleString('es-MX')} MXN</p>
-      </div>`
+      </div>`)
     : `<p style="color:#6b6b6b;font-size:0.85rem;margin-bottom:16px">El saldo total de <strong>$${payload.total_mxn.toLocaleString('es-MX')} MXN</strong> se liquida al check-in.</p>`;
 
   // Notas visibles al cliente solo si NO son solo el anticipo (no mostrar info interna)

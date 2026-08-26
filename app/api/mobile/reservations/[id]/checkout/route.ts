@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireHotelStaff } from '@/app/lib/mobile-auth';
 import { supabaseGet, supabasePatch } from '@/app/lib/supabase';
+import { sendCheckoutEmail, type FullReservation } from '@/app/lib/emails';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,8 +32,8 @@ export async function POST(
   const { id } = await params;
   const body = (await req.json().catch(() => ({}))) as Body;
 
-  const rows = await supabaseGet<{ id: string; status: string; checkout_at: string | null; room: string | null }>('reservations', {
-    select: 'id,status,checkout_at,room',
+  const rows = await supabaseGet<FullReservation & { checkout_at: string | null; room: string | null }>('reservations', {
+    select: 'id,folio,guest_name,guest_email,guest_phone,room_type,check_in,check_out,nights,total_mxn,adults,children,rooms,notes,status,payment_method,payment_id,paid_at,line_items,checkout_at,room',
     id: `eq.${id}`,
     limit: '1',
   });
@@ -100,5 +101,18 @@ export async function POST(
     }).catch(() => null);
   }
 
-  return NextResponse.json({ success: true, data: { already: false } });
+  // b22: correo de salida al huésped — el admin web lo manda desde siempre y
+  // el check-out de la app no, así que a quien salía por la app nunca se le
+  // despedía. Awaited (Vercel congela la función al responder).
+  let emailSent = false;
+  if (r.guest_email) {
+    emailSent = await sendCheckoutEmail(r)
+      .then(() => true)
+      .catch((err: unknown) => {
+        console.error('[mobile/checkout] correo de salida falló', err);
+        return false;
+      });
+  }
+
+  return NextResponse.json({ success: true, data: { already: false, email_sent: emailSent } });
 }

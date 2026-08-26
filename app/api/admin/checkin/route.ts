@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { verifyAdminToken } from '@/app/lib/admin-auth';
 import { supabaseGet, supabasePost, supabasePatch, logAuditEvent } from '@/app/lib/supabase';
+import { propagateDirectorioCheckin } from '@/app/lib/directorio-mirror';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,30 +11,6 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const BUCKET = 'guest-ids';
 
 const DOC_TYPES = new Set(['ine', 'pasaporte', 'licencia', 'cedula', 'residente', 'otro']);
-
-const MIRROR_UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
-
-/**
- * Reserva nacida en el Directorio Santiago (source='directorio'): al hacerle
- * check-in aquí, refleja la llegada en `lodging_reservations` (base compartida)
- * para que el pase del huésped en la app muestre "Check-in hecho". Best-effort,
- * no pisa un check-in previo hecho desde la app del anfitrión.
- */
-async function propagateDirectorioCheckin(notes: string | null, at: string): Promise<void> {
-  const dirId = notes?.match(MIRROR_UUID_RE)?.[0];
-  if (!dirId) return;
-  try {
-    const rows = await supabaseGet<{ id: string; checked_in_at: string | null }>(
-      'lodging_reservations',
-      { id: `eq.${dirId}`, select: 'id,checked_in_at', limit: '1' }
-    );
-    if (rows[0] && !rows[0].checked_in_at) {
-      await supabasePatch('lodging_reservations', dirId, { checked_in_at: at });
-    }
-  } catch (err) {
-    console.error('[checkin] directorio propagate failed', err);
-  }
-}
 
 /**
  * POST /api/admin/checkin — registra el check-in de un huésped (multipart):
