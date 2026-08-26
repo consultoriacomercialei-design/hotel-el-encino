@@ -150,7 +150,8 @@ export function generateICS(payload: ReservationPayload, reservationId: string, 
     payload.children ? `Niños: ${payload.children}`   : '',
     payload.rooms && payload.rooms > 1 ? `Habitaciones: ${payload.rooms}` : '',
     `Total: $${payload.total_mxn.toLocaleString('es-MX')} MXN`,
-    payload.notes ? `Notas: ${payload.notes}` : '',
+    // Las notas NO viajan aquí: este .ics se adjunta al correo del huésped y
+    // el campo es interno (cobranza, RFC del corporativo, recordatorios).
   ].filter(Boolean).join('\\n');
 
   return [
@@ -238,10 +239,12 @@ export async function sendConfirmedEmails(
       </div>`)
     : `<p style="color:#6b6b6b;font-size:0.85rem;margin-bottom:16px">El saldo total de <strong>$${payload.total_mxn.toLocaleString('es-MX')} MXN</strong> se liquida al check-in.</p>`;
 
-  // Notas visibles al cliente solo si NO son solo el anticipo (no mostrar info interna)
-  const notesForGuest = payload.notes
-    ? payload.notes.replace(/(?:anticipo|depósito|deposito|adelanto)[:\s]*\$?\s*[\d,]+/gi, '').replace(/\s{2,}/g, ' ').trim()
-    : '';
+  // b22: el campo de notas es INTERNO — cobranza, RFC del corporativo, planes
+  // de pago, recordatorios del equipo. Antes se le reenviaba al huésped tras
+  // tachar solo la palabra "anticipo", y a Daniela Álvarez le llegó completo:
+  // RFC de OSLO, el plan de pago y una advertencia interna sobre una noche que
+  // se nos había quedado sin cobrar. Nada de esto vuelve a salir del hotel.
+  const notesForGuest = '';
 
   const [guestResult] = await Promise.all([
     // Huésped
