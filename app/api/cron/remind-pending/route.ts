@@ -12,13 +12,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendReminderEmails } from '@/app/lib/emails';
 
+import { CHECKOUT_WINDOW_MINUTES } from '@/app/lib/checkout-window';
+
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
 
-// Send reminder when reservation is between 80–100 minutes old
-const REMINDER_MIN = 80;
-const REMINDER_MAX = 100;
+/**
+ * Recordatorio de pago. Estaba INOPERANTE desde siempre — cero enviados en toda
+ * la historia (26-ago-2026) por dos motivos a la vez:
+ *   1. Buscaba `status=eq.pending`, un estado que NO EXISTE en la tabla (los
+ *      reales son confirmed / cancelled / pending_payment).
+ *   2. Pedía reservas de entre 80 y 100 minutos de antigüedad mientras el cron
+ *      corre unas pocas veces al día: esa ventana de 20 minutos casi nunca
+ *      caía dentro de una corrida.
+ * Ahora la ventana cubre desde 1 h hasta el vencimiento de la liga, así que
+ * cualquier corrida alcanza a quien siga sin pagar. `reminder_sent_at` sigue
+ * garantizando UN solo recordatorio por reserva.
+ */
+const REMINDER_MIN = 60;
+const REMINDER_MAX = CHECKOUT_WINDOW_MINUTES;
 
 type PendingReservation = {
   id: string;
@@ -55,10 +68,10 @@ export async function GET(req: NextRequest) {
   const windowStart = new Date(now - REMINDER_MAX * 60 * 1000).toISOString();
   const windowEnd   = new Date(now - REMINDER_MIN * 60 * 1000).toISOString();
 
-  // Find pending reservations in the 80–100 min window that haven't been reminded yet
+  // Pendientes de pago dentro de la ventana, sin recordatorio previo.
   const getRes = await fetch(
     `${url}/rest/v1/reservations` +
-    `?status=eq.pending` +
+    `?status=eq.pending_payment` +
     `&created_at=gte.${windowStart}` +
     `&created_at=lte.${windowEnd}` +
     `&reminder_sent_at=is.null` +

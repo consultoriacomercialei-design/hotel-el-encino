@@ -743,6 +743,63 @@ export async function sendPaymentConfirmedEmails(reservation: FullReservation) {
 // confirmación; este correo existe para que el dueño se entere del dinero.
 // ─────────────────────────────────────────────────────────────────────────────
 
+export interface LatePaymentAlert {
+  folio: string;
+  guestName: string;
+  minutos: number;
+  checkIn: string;
+  checkOut: string;
+  roomType: string;
+  totalMxn: number;
+  paymentId: string;
+}
+
+/**
+ * Aviso interno de pago TARDÍO. La liga de pago vive 24 h pero el cuarto solo
+ * se aparta 20 minutos, así que un pago que entra mucho después pudo caer
+ * sobre un cuarto que ya se vendió. El cobro no se detiene —el dinero ya
+ * entró— pero el hotel tiene que revisar el calendario de inmediato.
+ */
+export async function sendLatePaymentInternalEmail(a: LatePaymentAlert) {
+  const horas = a.minutos >= 60 ? `${Math.floor(a.minutos / 60)} h ${a.minutos % 60} min` : `${a.minutos} min`;
+  const text = [
+    `PAGO TARDIO — ${a.folio} (${a.guestName})`,
+    '',
+    `Pago recibido ${horas} despues de crear la reserva.`,
+    `El cuarto dejo de estar apartado a los 20 minutos, asi que revisa el calendario:`,
+    `si ya se vendio a otro huesped hay que reacomodar o reembolsar.`,
+    '',
+    `Fechas: ${a.checkIn} → ${a.checkOut}`,
+    `Habitacion: ${ROOM_LABELS[a.roomType] || a.roomType}`,
+    `Total: $${a.totalMxn.toLocaleString('es-MX')} MXN`,
+    `Pago MP: ${a.paymentId}`,
+  ].join('\n');
+
+  const html = `
+  <div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:0 auto;color:#0f172a">
+    <h2 style="color:#b45309">Pago tardío — ${a.folio}</h2>
+    <p style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 14px;font-size:14px">
+      <strong>${a.guestName}</strong> pagó <strong>${horas}</strong> después de crear la reserva.
+      El cuarto deja de estar apartado a los 20 minutos: <strong>revisa el calendario</strong>.
+      Si esas fechas ya se vendieron, hay que reacomodar o reembolsar.
+    </p>
+    <p style="font-size:14px;line-height:1.6">
+      <strong>Fechas:</strong> ${a.checkIn} → ${a.checkOut}<br/>
+      <strong>Habitación:</strong> ${ROOM_LABELS[a.roomType] || a.roomType}<br/>
+      <strong>Total:</strong> $${a.totalMxn.toLocaleString('es-MX')} MXN<br/>
+      <strong>Pago MP:</strong> ${a.paymentId}
+    </p>
+  </div>`;
+
+  return sendEmail({
+    from: FROM,
+    to: [HOTEL_EMAIL, ADMIN_EMAIL].filter(Boolean) as string[],
+    subject: `PAGO TARDIO — ${a.folio} · ${a.guestName} (revisar calendario)`,
+    html,
+    text,
+  });
+}
+
 export async function sendManualPaymentInternalEmail(reservation: FullReservation) {
   const room = ROOM_LABELS[reservation.room_type] || reservation.room_type;
   const methodLabel =

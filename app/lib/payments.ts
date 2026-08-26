@@ -15,7 +15,7 @@
 
 import { supabaseGet, supabasePatch, logWebhookEvent, logAuditEvent } from '@/app/lib/supabase';
 import { createCalendarEvent, findAndDeleteCalendarEventsByFolio, type CalendarPayload } from '@/app/lib/google-calendar';
-import { sendPaymentConfirmedEmails, sendManualPaymentInternalEmail, type FullReservation } from '@/app/lib/emails';
+import { sendPaymentConfirmedEmails, sendManualPaymentInternalEmail, sendLatePaymentInternalEmail, type FullReservation } from '@/app/lib/emails';
 import { ensureCheckinCode } from '@/app/lib/wallet/checkin-code';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -116,12 +116,54 @@ export async function deriveReservationState(reservationId: string): Promise<Der
 
     if (!patched) return 'already_confirmed';
 
+    // Aviso de pago TARDÍO: la liga vive 24 h pero el cuarto se libera a los
+    // 20 minutos, así que un pago que entra mucho después pudo caer sobre un
+    // cuarto ya vendido. No se bloquea el cobro —el dinero ya entró— pero el
+    // hotel se entera en el momento para reacomodar o reembolsar.
+    await avisarSiEsPagoTardio(reservationId, paymentId).catch((e: unknown) =>
+      console.error('[PAYMENTS] aviso de pago tardío falló', e)
+    );
+
     await runConfirmationSideEffects(reservationId, paymentId);
     return 'confirmed';
   } catch (err) {
     console.error('[PAYMENTS] derive failed', reservationId, err);
     return 'error';
   }
+}
+
+/** Minutos que una reserva sin pagar aparta el cuarto (ver /api/availability). */
+const VENTANA_BLOQUEO_MIN = 20;
+
+/**
+ * Si el pago entró después de que el cuarto dejó de estar apartado, avisa al
+ * hotel. Nunca lanza ni bloquea la confirmación.
+ */
+async function avisarSiEsPagoTardio(reservationId: string, paymentId: string): Promise<void> {
+  const rows = await supabaseGet<{
+    folio: string | null; guest_name: string; created_at: string;
+    check_in: string; check_out: string; room_type: string; total_mxn: number | null;
+  }>('reservations', {
+    id: `eq.${reservationId}`,
+    select: 'folio,guest_name,created_at,check_in,check_out,room_type,total_mxn',
+    limit: '1',
+  });
+  const r = rows[0];
+  if (!r) return;
+
+  const minutos = Math.round((Date.now() - new Date(r.created_at).getTime()) / 60000);
+  if (minutos <= VENTANA_BLOQUEO_MIN) return;
+
+  await sendLatePaymentInternalEmail({
+    folio: r.folio ?? '',
+    guestName: r.guest_name,
+    minutos,
+    checkIn: r.check_in,
+    checkOut: r.check_out,
+    roomType: r.room_type,
+    totalMxn: r.total_mxn ?? 0,
+    paymentId,
+  });
 }
 
 /** Calendario + correo de confirmación (con pase Wallet/QR). Best-effort. */

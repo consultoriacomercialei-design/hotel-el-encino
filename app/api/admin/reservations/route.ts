@@ -12,12 +12,18 @@ import { recordManualPartialPayment } from '@/app/lib/payments';
 import { limiters, getClientIP, tooManyRequests } from '@/app/lib/rate-limit';
 import { sanitizeString, isValidEmail, isValidDate } from '@/app/lib/sanitize';
 
+import { CHECKOUT_WINDOW_MS } from '@/app/lib/checkout-window';
+
 const SUPABASE_URL = process.env.SUPABASE_URL!;
 const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-/** Cancel pending_payment reservations older than 45 min — fire and forget */
+/**
+ * Cancela las pending_payment vencidas al abrir el admin — fire and forget.
+ * Usa la MISMA ventana que la liga de pago: antes cancelaba a los 45 min por su
+ * cuenta y podía matar una reserva cuya liga seguía viva.
+ */
 function expireStalePayments(): void {
-  const cutoff = new Date(Date.now() - 45 * 60 * 1000).toISOString();
+  const cutoff = new Date(Date.now() - CHECKOUT_WINDOW_MS).toISOString();
   fetch(
     `${SUPABASE_URL}/rest/v1/reservations?status=eq.pending_payment&created_at=lt.${cutoff}`,
     {

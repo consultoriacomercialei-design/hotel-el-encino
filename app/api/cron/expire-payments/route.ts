@@ -17,12 +17,15 @@ import { findAndDeleteCalendarEventsByFolio } from '@/app/lib/google-calendar';
 import { supabaseGet } from '@/app/lib/supabase';
 import { deriveReservationState } from '@/app/lib/payments';
 
+import { CHECKOUT_WINDOW_MINUTES } from '@/app/lib/checkout-window';
+
 const SUPABASE_URL = process.env.SUPABASE_URL!;
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const CRON_SECRET = process.env.CRON_SECRET;
 
-// MP checkout links expire in ~45 min — match the same window
-const EXPIRY_MINUTES = 45;
+// Misma ventana que la liga de MP — fuente única en lib/checkout-window.
+// El cuarto NO espera todo esto: /api/availability lo libera a los 20 minutos.
+const EXPIRY_MINUTES = CHECKOUT_WINDOW_MINUTES;
 
 interface StaleReservation {
   id:           string;

@@ -10,9 +10,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseGet } from '@/app/lib/supabase';
 import { lastPaymentFor } from '@/app/lib/payments';
 import { limiters, getClientIP, tooManyRequests } from '@/app/lib/rate-limit';
+import { CHECKOUT_WINDOW_MS } from '@/app/lib/checkout-window';
 
-// Ventana del checkout de MP (alineada con payment/create y el cron)
-const CHECKOUT_WINDOW_MS = 45 * 60 * 1000;
+// Ventana del checkout de MP — fuente única compartida.
 
 export async function GET(
   req: NextRequest,
@@ -44,7 +44,7 @@ export async function GET(
   const lastPayment = await lastPaymentFor(reservation_id);
 
   // Liga de reintento: solo mientras la reserva siga pendiente y el checkout
-  // de MP no haya expirado (45 min desde la creación).
+  // de MP no haya expirado.
   const windowAlive = Date.now() - new Date(r.created_at).getTime() < CHECKOUT_WINDOW_MS;
   const retryUrl = r.status === 'pending_payment' && windowAlive ? r.init_point : null;
 

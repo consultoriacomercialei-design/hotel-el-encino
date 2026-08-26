@@ -10,6 +10,8 @@ import { sendPendingPaymentEmails, type ReservationPayload } from '@/app/lib/ema
 import { limiters, getClientIP, tooManyRequests } from '@/app/lib/rate-limit';
 import { isValidEmail, sanitizeString } from '@/app/lib/sanitize';
 
+import { checkoutExpiresAt } from '@/app/lib/checkout-window';
+
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
 // SERVER_BASE_URL is non-public so it's read from Vercel env at runtime (not baked into build)
 const BASE_URL = (process.env.SERVER_BASE_URL || 'https://hotelelencino.com').trim().replace(/\/+$/, '');
@@ -47,9 +49,16 @@ export async function POST(req: NextRequest) {
 
     // El monto a cobrar SIEMPRE sale de la fila persistida (recalculada por el
     // servidor en /api/reservations), nunca del total que arma el navegador.
-    const rows = await supabaseGet<{ total_mxn: number; nights: number }>('reservations', {
+    // Se traen TODOS los campos que necesita el correo: armarlo con lo que
+    // manda el navegador reventaba el endpoint si el body venía incompleto
+    // (500 con "Cannot read properties of undefined" al formatear el total).
+    const rows = await supabaseGet<{
+      total_mxn: number; nights: number; guest_name: string; guest_email: string;
+      guest_phone: string | null; room_type: string; check_in: string; check_out: string;
+      adults: number | null; children: number | null; rooms: number | null; notes: string | null;
+    }>('reservations', {
       id:     `eq.${reservation_id}`,
-      select: 'total_mxn,nights',
+      select: 'total_mxn,nights,guest_name,guest_email,guest_phone,room_type,check_in,check_out,adults,children,rooms,notes',
     });
     const reservation = rows[0];
     if (!reservation) {
@@ -84,8 +93,10 @@ export async function POST(req: NextRequest) {
     // Pending = OXXO/transfer not yet cleared — same page, polling will handle it
     const pendingUrl = `${BASE_URL}/reservacion/confirmada`;
 
-    // MP recomienda 45 min para checkout — alineado con cron expire-payments
-    const expirationDate = new Date(Date.now() + 45 * 60 * 1000).toISOString();
+    // Ventana del checkout — fuente única en lib/checkout-window.
+    // NO confundir con el bloqueo del cuarto: ese vive en /api/availability y
+    // sigue siendo de 20 minutos. Son dos relojes distintos.
+    const expirationDate = checkoutExpiresAt().toISOString();
 
     console.log('[PAYMENT/CREATE] BASE_URL:', BASE_URL, '| back_urls:', successUrl, failureUrl);
 
@@ -115,7 +126,7 @@ export async function POST(req: NextRequest) {
       external_reference: `${reservation_id}|${folio}`,
       // Statement descriptor — máx 22 chars, sin acentos
       statement_descriptor: 'HOTEL EL ENCINO',
-      // Cierra el checkout pasados 45 min (alineado con cron)
+      // Cierra el checkout al vencer la ventana (ver lib/checkout-window)
       expires: true,
       expiration_date_to: expirationDate,
       // Permite hasta 12 meses sin intereses con tarjeta
@@ -155,7 +166,26 @@ export async function POST(req: NextRequest) {
     // init_point se persiste para que la página de estado ofrezca reintentar
     // el pago (mismo checkout) si un intento es rechazado.
     await supabasePatch('reservations', reservation_id, { preference_id, init_point });
-    await sendPendingPaymentEmails(body, folio, init_point, reservation_id);
+
+    // El correo se arma con la FILA, no con el body. Y si falla, el huésped no
+    // pierde su liga: ya está creada y persistida, así que se responde igual.
+    const emailPayload: ReservationPayload = {
+      guest_name:  reservation.guest_name,
+      guest_email: reservation.guest_email,
+      guest_phone: reservation.guest_phone ?? '',
+      room_type:   reservation.room_type,
+      check_in:    reservation.check_in,
+      check_out:   reservation.check_out,
+      nights:      reservation.nights,
+      total_mxn:   total_mxn,
+      adults:      reservation.adults ?? undefined,
+      children:    reservation.children ?? undefined,
+      rooms:       reservation.rooms ?? undefined,
+      notes:       reservation.notes ?? undefined,
+    };
+    await sendPendingPaymentEmails(emailPayload, folio, init_point, reservation_id).catch(
+      (e: unknown) => console.error('[PAYMENT/CREATE] correo de liga falló (liga ya creada):', e)
+    );
 
     console.log(`[PAYMENT/CREATE] ${folio} — preference ${preference_id}`);
 
